@@ -1,0 +1,53 @@
+{
+  "name": "credit-commons/cc-server",
+  "description": "REST interface for a Credit Commons node.",
+  "type": "package",
+  "license": "GPL-2.0+",
+  "homepage": "https://creditcommons.net",
+  "minimum-stability": "dev",
+  "authors": [
+    {
+      "name": "Matthew Slater",
+      "email": "matslats@fastmail.com",
+      "homepage": "http://matslats.net",
+      "role": "Maintainer"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "path",
+      "url": "/home/matslats/Documents/CreditCommons/credit-commons/cc-node"
+    },
+    {
+      "type": "path",
+      "url": "/home/matslats/Documents/CreditCommons/credit-commons/default-accountstore-server"
+    },
+    {
+      "type": "path",
+      "url": "/home/matslats/Documents/CreditCommons/credit-commons/default-accountstore"
+    }
+  ],
+  "require": {
+    "credit-commons/cc-node": "@dev",
+    "php": "^8.0",
+    "credit-commons/default-accountstore": "dev-main"
+  },
+  "require-dev": {
+    "slim/psr7": "dev-master",
+    "phpunit/phpunit": "^9",
+    "nyholm/psr7": "^1.4",
+    "league/openapi-psr7-validator": "dev-master"
+  },
+  "autoload": {
+    "psr-4": {
+      "CCServer\\": "src",
+      "CCServer\\Tests\\": "tests"
+    }
+  },
+  "scripts": {
+    "post-create-project-cmd": [
+      "cp vendor/credit-commons/cc-node/node.ini.example node.ini",
+      "touch last_exception.log"
+    ]
+  }
+}
