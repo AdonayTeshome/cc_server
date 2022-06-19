@@ -53,10 +53,11 @@ Your app needs to provide the Credit Commons node with basic info about your use
 The business logic, is optional but works in a similar way. You can set up a microservice which implements the one method API, example is [cc-blogic-server](blah)
 
 ## Installation
-To install a credit commons server, download this package and configure your web server with a virtualhost pointing to it.
-Then from this directory run
-```composer install```
-at the command line.
+To install a credit commons server,
+```$ git clone https://gitlab.com/credit-commons/cc-server.git MY_WEB_ROOT
+$ cd MY_WEB_ROOT
+$ composer install```
+
 navigate in your browser to the web root, and you will be redirected to the setup page.
 Create a database and enter your credentials. Note that here you can also set the classes or urls for the accountstore and the business logic module.
 Navigate again to the web root and if should see a holding page the server is ready to receive requests.

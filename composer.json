@@ -15,16 +15,16 @@
   ],
   "repositories": [
     {
-      "type": "path",
-      "url": "/home/matslats/Documents/CreditCommons/credit-commons/cc-node"
+      "type": "gitlab",
+      "url": "git@gitlab.com:credit-commons/cc-node.git"
     },
     {
-      "type": "path",
-      "url": "/home/matslats/Documents/CreditCommons/credit-commons/default-accountstore-server"
+      "type": "gitlab",
+      "url": "git@gitlab.com:credit-commons/default-accountstore-server.git"
     },
     {
-      "type": "path",
-      "url": "/home/matslats/Documents/CreditCommons/credit-commons/default-accountstore"
+      "type": "gitlab",
+      "url": "git@gitlab.com:credit-commons/default-accountstore.git"
     }
   ],
   "require": {
