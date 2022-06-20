@@ -54,11 +54,14 @@ The business logic, is optional but works in a similar way. You can set up a mic
 
 ## Installation
 To install a credit commons server,
-```$ git clone https://gitlab.com/credit-commons/cc-server.git MY_WEB_ROOT
-$ cd MY_WEB_ROOT
-$ composer install```
 
-navigate in your browser to the web root, and you will be redirected to the setup page.
+    $ composer create-project --stability dev credit-commons/cc-server --repository '{"type": "gitlab","url": "git@gitlab.com:credit-commons/cc-server.git"}' MY_CC_SERVER
+
+Create the VirtualHost on your webserver with the web root pointing to MY_CC_SERVER and restart the server.
+Navigate in your browser to the web root, and you will be redirected to the setup page.
 Create a database and enter your credentials. Note that here you can also set the classes or urls for the accountstore and the business logic module.
-Navigate again to the web root and if should see a holding page the server is ready to receive requests.
+Navigate again to the web root and if you see a holding page the server is ready to receive requests.
 To authorise requests against users in the demo account store use headers cc-user: alice and cc-auth: 123
+Run tests with:
+
+    $ vendor/bin/phpunit tests/SingleNodeTest.php

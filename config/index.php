@@ -55,10 +55,10 @@ if ($_POST) {
     $errs[] = "Account store given is not a domain and does not exist as a class";
   }
   elseif ($accStore == '\CCNode\AccountStoreDefault' and !class_exists('\AccountStore\AccountManager')) {
-    echo "Do 'composer require credit-commons/default-accountstore' to use the default AccountStore";
+    echo "Do 'composer require credit-commons/cc-demo-accountstore' to use the default AccountStore";
   }
   elseif ($accStore == '\CCNode\AccountStoreDefault' and !file_exists(DEFAULT_ACCOUNT_STORE_DATA_FILE)) {
-    copy('../vendor/credit-commons/default-accountstore/accounts.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
+    copy('../vendor/credit-commons/cc-demo-accountstore/accounts.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
     echo DEFAULT_ACCOUNT_STORE_DATA_FILE." file created.";
   }
   if (empty($_POST['db']['name'])) {

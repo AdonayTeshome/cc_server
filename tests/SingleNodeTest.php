@@ -16,7 +16,6 @@ class SingleNodeTest extends TestBase {
     parent::__construct();
     $config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
     $config->devMode = 1;
-    $this->getApp();//also loads slimapp.php
     $this->loadAccounts();
   }
 
