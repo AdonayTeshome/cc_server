@@ -29,6 +29,12 @@
     "nyholm/psr7": "^1.4",
     "league/openapi-psr7-validator": "dev-master"
   },
+  "autoload": {
+    "psr-4": {
+      "CCServer\\": "src",
+      "CCServer\\Tests\\": "tests"
+    }
+  },
   "scripts": {
     "post-update-cmd": [
       "cp -n vendor/credit-commons/cc-demo-accountstore/accounts.json.example accounts.json",
