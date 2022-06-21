@@ -47,8 +47,8 @@ class PermissionMiddleware {
       if ($acc_id) {
         $user = load_account($acc_id);
         $auth = ($request->getHeaderLine('cc-auth') == 'null') ?
-          NULL : // Don't know why null is returned as a string.
-          $request->getHeaderLine('cc-auth');
+          NULL : // not sure how or why null is returned as a string.
+          (string)$request->getHeaderLine('cc-auth');
         if ($user instanceOf Remote) {
           if (!$this->matchHashes($acc_id, $auth)) {
             throw new HashMismatchFailure($acc_id);

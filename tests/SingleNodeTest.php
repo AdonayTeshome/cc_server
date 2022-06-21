@@ -252,7 +252,9 @@ class SingleNodeTest extends TestBase {
 
     $results = $this->sendRequest("transactions?involving=$payee", 200, $norm_user);
     foreach ($results as $res) {
-      if (strpos($res->entries[0]->payer, $payee) !== FALSE and strpos($res->entries[0]->payee, $payee) !== FALSE) {
+      $main = $res->entries[0];
+      // Every result should have $payee as either payee or payer;
+      if (strpos($main->payee, $payee) === FALSE and strpos($main->payer, $payee) === FALSE) {
         $err = TRUE;
       }
     }

@@ -36,8 +36,9 @@
     }
   },
   "scripts": {
-    "post-update-cmd": [
+    "post-create-project-cmd": [
       "cp -n vendor/credit-commons/cc-demo-accountstore/accounts.json.example accounts.json",
+      "cp -n vendor/credit-commons/cc-node/workflows.json.example workflows.json",
       "touch last_exception.log"
     ]
   }
