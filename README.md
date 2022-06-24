@@ -1,6 +1,6 @@
 # Credit Commons node (server)
 
-This package provide a REST wrapper around the [Credit Commons node](cc-node).
+This package provide a REST wrapper around the [Credit Commons node](cc-node). Use it if you want a standalone ledger or if your main application is not in PHP.
 
 ## About this reference implementation
 PHP and Mysql are widely used and trusted over the long term, and the languages in which the developer is most proficient. The architecture presented some challenges and the solutions here should be considered provisional. The project is published as seven packages:
@@ -55,7 +55,7 @@ The business logic, is optional but works in a similar way. You can set up a mic
 ## Installation
 To install a credit commons server,
 
-    $ composer create-project --stability dev credit-commons/cc-server --repository '{"type": "gitlab","url": "git@gitlab.com:credit-commons/cc-server.git"}' MY_CC_SERVER
+    $ composer create-project --stability dev credit-commons/cc-server --repository '{"type": "gitlab","url": "git@gitlab.com:credit-commons/cc-server"}' MY_CC_SERVER
 
 Create the VirtualHost on your webserver with the web root pointing to MY_CC_SERVER and restart the server.
 Navigate in your browser to the web root, and you will be redirected to the setup page.
