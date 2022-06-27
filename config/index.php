@@ -8,7 +8,7 @@ if (!is_dir('../vendor')) {
 require_once '../vendor/autoload.php';
 
 const NODE_INI_FILE = '../node.ini';
-const DEFAULT_ACCOUNT_STORE_DATA_FILE = '../accounts.json';
+const DEFAULT_ACCOUNT_STORE_DATA_FILE = '../accountstore.json';
 
 if (!is_file(NODE_INI_FILE)) {
   copy('../vendor/credit-commons/cc-node/node.ini.example', NODE_INI_FILE);
@@ -58,7 +58,7 @@ if ($_POST) {
     echo "Do 'composer require credit-commons/cc-demo-accountstore' to use the default AccountStore";
   }
   elseif ($accStore == '\CCNode\AccountStoreDefault' and !file_exists(DEFAULT_ACCOUNT_STORE_DATA_FILE)) {
-    copy('../vendor/credit-commons/cc-demo-accountstore/accounts.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
+    copy('../vendor/credit-commons/cc-demo-accountstore/accountstore.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
     echo DEFAULT_ACCOUNT_STORE_DATA_FILE." file created.";
   }
   if (empty($_POST['db']['name'])) {

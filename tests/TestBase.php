@@ -108,7 +108,7 @@ class TestBase extends TestCase {
   function loadAccounts() {
     global $config;
     $this->nodePath = explode('/', $config->absPath);
-    $this->rawAccounts = (array)json_decode(file_get_contents('accounts.json'));
+    $this->rawAccounts = (array)json_decode(file_get_contents('accountstore.json'));
 
     foreach ($this->rawAccounts as $acc_id => $acc) {
       if (!empty($acc->key)) {
@@ -130,7 +130,7 @@ class TestBase extends TestCase {
       }
     }
     if (empty($this->normalAccIds) || empty($this->adminAccIds)) {
-      die("Testing requires both admin and non-admin accounts in store.json");
+      die("Testing requires both admin and non-admin accounts in accountstore.json");
     }
   }
 

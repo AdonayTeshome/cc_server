@@ -45,7 +45,7 @@
   },
   "scripts": {
     "post-create-project-cmd": [
-      "cp -n vendor/credit-commons/cc-demo-accountstore/accounts.json.example accounts.json",
+      "cp -n vendor/credit-commons/cc-php-lib/Example/accountstore.json.example accountstore.json",
       "cp -n vendor/credit-commons/cc-node/workflows.json.example workflows.json",
       "touch last_exception.log"
     ]
