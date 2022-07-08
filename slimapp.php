@@ -13,7 +13,6 @@ use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCFailure;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Slim\App;
 
 // Slim4 (when the League\OpenAPIValidation is ready)
 //use Slim\Factory\AppFactory;
@@ -41,8 +40,7 @@ use Slim\App;
 //    return $response->withStatus($exception->getCode());
 //});
 
-$app = new App();
-$app;
+$app = new \Slim\App();
 $c = $app->getContainer();
 $getErrorHandler = function ($c) {
   return new Slim3ErrorHandler();
@@ -100,8 +98,10 @@ $acc_path = '/{acc_path1}[/[{acc_path2}[/[{acc_path3}[/]]]]]';
 $app->get("/accounts/names[$acc_path]", function (Request $request, Response $response, $args) {
   global $node;
   $acc_path = extractAccPathParams($args, $request);
+  $limit = $request->getQueryParams()['limit'] ??'10';
   // Assuming the limit is 10.
-  return json_response($response, $node->accountNameFilter($acc_path, $request->getQueryParams()['limit'] ??'10'));
+  $names = $node->accountNameFilter($acc_path, $limit);
+  return json_response($response, $names);
 }
 )->setName('accountNameFilter')->add(PermissionMiddleware::class);
 
@@ -221,7 +221,8 @@ function exception_error_handler( $severity, $message, $file, $line ) {
 }
 
 /**
- * Currently the testing framework doesn't allow optional args, so paths accept 3 and only 3 args which are populated by null
+ * Currently the testing framework doesn't allow optional args,
+ * So paths accept 3 and only 3 args which are populated by null
  * @param array $args
  */
 function extractAccPathParams(array &$args, Request $request) : string {

@@ -60,6 +60,7 @@ class TestBase extends TestCase {
       $this->assertEquals($expected_response, $status_code);
     }
     elseif (is_string($expected_response)) {
+      // $expected_response is the classname of the error.
       if (isset($contents->class)) {
         $err = \CreditCommons\NodeRequester::reconstructCCErr($contents);
         $class = "\\CreditCommons\Exceptions\\$expected_response";

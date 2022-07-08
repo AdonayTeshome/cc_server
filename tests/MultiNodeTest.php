@@ -16,6 +16,10 @@ class MultiNodeTest extends SingleNodeTest {
   function __construct() {
     global $local_accounts, $foreign_accounts_grouped, $foreign_accounts, $remote_accounts, $config;
     parent::__construct();
+    $this->truncate('credcom_leaf');
+    $this->truncate('credcom_branch1');
+    $this->truncate('credcom_branch2');
+    $this->truncate('credcom_trunk');
     $this->nodePath = explode('/', $config->absPath);
 
     if (!$local_accounts) {
@@ -24,7 +28,7 @@ class MultiNodeTest extends SingleNodeTest {
       // Find all the accounts we can in what is presumably a limited testing tree and group them by node
       $local_and_trunkward = $this->sendRequest("accounts/names?limit=50", 200, $local_user);
       foreach ($local_and_trunkward as $path_name) {
-        if (substr($path_name, -1) <> '/') {
+        if (strpos($path_name, '/')) {
           $all_accounts[] = $path_name;//local
         }
         else {//remote
@@ -54,12 +58,12 @@ class MultiNodeTest extends SingleNodeTest {
       if (substr($result, -1) <> '/') {
         $all_accounts[] = $result;
       }
-      else {
-        if (count(explode('/', $result)) < 3) {
-          $this->getLeafwardAccounts ($result, $all_accounts);
-        }
+      elseif (count(explode('/', $result)) < 3) {// Coz of OpenAPI optional arguments workaround
+        $this->getLeafwardAccounts ($result, $all_accounts);
       }
     }
+    // Since we retrieved also trunkward accounts which we already had, dedupe.
+    $all_accounts = array_unique($all_accounts);
   }
 
   function testHandshake() {
@@ -72,7 +76,7 @@ class MultiNodeTest extends SingleNodeTest {
   }
 
   function testBadTransactions() {
-    //parent::testBadTransactions();
+    parent::testBadTransactions();
     global $local_accounts, $foreign_accounts_grouped, $remote_accounts;
     $admin = reset($this->adminAccIds);
     $obj = [
@@ -90,7 +94,7 @@ class MultiNodeTest extends SingleNodeTest {
     // Try to trade with a mirror account.
     $obj['payee'] = reset($local_accounts);
     $obj['payer'] = reset($remote_accounts);
-    $this->sendRequest('transaction', 'PathViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
   }
 
   function test3rdParty() {
@@ -103,17 +107,17 @@ class MultiNodeTest extends SingleNodeTest {
       'payee' => end($foreign_node),
       'payer' => reset($foreign_node),
       'description' => 'test 3rdparty',
-      'quant' => 25,
+      'quant' => 12,
       'type' => '3rdparty',
       'metadata' => ['foo' => 'bar']
     ];
     // test that admin can't even do a transaction between two foreign accounts
-//    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
     $obj->payee = reset($foreign_node);
     $obj->payer = reset($local_accounts);
-//    $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
 
-    // test again for good measure.
+    // Test again for good measure.
     $foreign_node = end($foreign_accounts_grouped);
     $obj->payee = end($foreign_node);
     $obj->payer = end($local_accounts);
@@ -138,6 +142,7 @@ class MultiNodeTest extends SingleNodeTest {
     $obj = (object)[
       'payer' => end($local_accounts),
       'payee' => $foreign_accounts[array_rand($foreign_accounts)],
+      'payee' => 'cctrunk/alice',
       'description' => 'test bill',
       'quant' => 10,
       'type' => 'credit',
@@ -145,12 +150,6 @@ class MultiNodeTest extends SingleNodeTest {
     ];
     $tx = $this->sendRequest('transaction', 200, $obj->payer, 'post', json_encode($obj));
     $this->sendRequest("transaction/$tx->uuid/pending", 201, $obj->payer, 'patch');
-    if ($this->trunkwardId) {
-      $uuid = $tx->uuid;
-      // Load this transaction from the trunkward node and check the quantity of entry[0]
-      $t_tx = $this->sendRequest("transaction/$tx->uuid/$this->trunkwardId", 200, $obj->payer, 'get');
-      $this->assertEquals($obj->quant, $t_tx->entries[0]->quant, 'Remote version of transaction not the same quant as local');
-    }
   }
 
   function testRemoteRetrievals() {
@@ -159,7 +158,7 @@ class MultiNodeTest extends SingleNodeTest {
     $user1 = reset($this->normalAccIds);
     // get all the limits
     foreach ($foreign_accounts_grouped as $node_path => $accounts) {
-//      $this->sendRequest("account/summary/$node_path/", 200, $user1);
+      $this->sendRequest("account/summary/$node_path/", 200, $user1);
       $this->sendRequest("account/limits/$node_path/", 200, $user1);
       $this->sendRequest("accounts/names/$node_path/", 200, $user1);
     }

@@ -15,6 +15,10 @@ class SingleNodeTest extends TestBase {
     global $config;
     parent::__construct();
     $config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
+    // Clear the database for single node test only.
+    if ($config->devMode and get_called_class() == get_class()) {
+      $this->truncate();
+    }
     $config->devMode = 1;
     $this->loadAccounts();
   }
@@ -72,14 +76,22 @@ class SingleNodeTest extends TestBase {
       'type' => '3rdparty',
       'metadata' => ['foo' => 'bar']
     ];
+    // Two accounts the same.
     $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    // Nonexisting account name
     $obj->payee = 'aaaaaaaaaaa';
     $this->sendRequest('transaction', 'PathViolation', $admin, 'post', json_encode($obj));
     $obj->payee = reset($this->adminAccIds);
     $obj->quant = 9999999;
     $this->sendRequest('transaction', 'TransactionLimitViolation', $admin, 'post', json_encode($obj));
+    global $config;
     $obj->quant = 0;
-    $this->sendRequest('transaction', 'CCViolation', $admin, 'post', json_encode($obj));
+    if ($config->zeroPayments) {
+      $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
+    }
+    else {
+      $this->sendRequest('transaction', 'CCViolation', $admin, 'post', json_encode($obj));
+    }
     $obj->quant = 1;
     $obj->type = 'zzzzzz';
     $this->sendRequest('transaction', 'DoesNotExistViolation', $admin, 'post', json_encode($obj));
@@ -303,5 +315,14 @@ class SingleNodeTest extends TestBase {
       }
     }
     return [$income, $expenditure];
+  }
+
+  protected function truncate($db='') {
+    if ($db) {
+      $db .= '.';
+    }
+    \CCNode\Db::query("TRUNCATE TABLE {$db}entries");
+    \CCNode\Db::query("TRUNCATE TABLE {$db}transactions");
+    \CCNode\Db::query("TRUNCATE TABLE {$db}log");
   }
 }

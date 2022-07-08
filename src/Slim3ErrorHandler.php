@@ -15,7 +15,7 @@ class Slim3ErrorHandler {
    * This callback is also used by the ValidationMiddleware.
    *
    * @note The task is made complicated because the $exception->message property is
-   * protected and is lost during json_encode
+   * protected and therefore lost during json_encode
    */
   public function __invoke($request, $response, $exception) {
     global $user, $config;
@@ -24,7 +24,10 @@ class Slim3ErrorHandler {
     }
     $exception_class = explode('\\', get_class($exception));
     $exception_class = array_pop($exception_class);
-    if (!$exception instanceOf CCError) {
+    if ($exception instanceOf CCError) {// New or received from downstream.
+      $output = $exception;
+    }
+    else {// An error from elsewhere, make a CCFailure.
       $code = 500;
       $exception_class = 'CCFailure';
       $output = new CCFailure($exception->getMessage()?:$exception_class);
@@ -36,20 +39,26 @@ class Slim3ErrorHandler {
 //        //if (get_class($exception) == 'League\OpenAPIValidation\PSR7\Exception\NoResponseCode') break;
 //      }
     }
-    else {// All CreditCommons error classes.
-      $output = (object)($exception);
-    }
-    $output->node = $exception->node??$config->nodeName;
-    $output->method = $request->getMethod();
-    $output->path = $request->geturi()->getPath();
     $output->class = $exception_class;
-    $output->user = $user ? $user->id : '-anon-';
-    if ($q = $request->geturi()->getQuery()){
-      $output->path .= '?'.$q;
+    if (isset($exception->node)) {
+      $output->node = $exception->node;
+      $output->trace = $exception->trace;
+      $output->break = $exception->break;
+      $output->method = $exception->method;
+      $output->path = $exception->path;
+      $output->user = $exception->user;
     }
-    $output->break = $exception->getFile() .': '.$exception->getLine();
-    $output->trace = $exception->getTraceAsString(); //experimental;;
-
+    else {
+      $output->node = $config->nodeName;
+      $output->trace = $exception->getTraceAsString(); //experimental;
+      $output->break = $exception->getFile() .': '.$exception->getLine();
+      $output->method = $request->getMethod();
+      $output->path = $request->geturi()->getPath();
+      $output->user = $user ? $user->id : '-anon-';
+      if ($q = $request->geturi()->getQuery()){
+        $output->path .= '?'.$q;
+      }
+    }
     return json_response($response, $output, $code??$exception->getCode());
    }
 

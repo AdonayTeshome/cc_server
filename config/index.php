@@ -27,6 +27,7 @@ $errs = [];
   <head>
     <title>Credit Commons config</title>
     <style>th{background-color: #eee;} li{display:inline-block; padding:0 1em;}</style>
+    <link rel="shortcut icon" href="http://creditcommons.net/themes/credcom/img/favicon.ico" />
   </head>
   <body>
     <?php if (!empty($errs)) {
@@ -43,8 +44,8 @@ $errs = [];
     <?php endif; ?>
 <?php
 if (!empty($_SERVER['QUERY_STRING'])){
-  if ($config->accountStore) {
-    require $_SERVER['QUERY_STRING'].'.php'; // only applies to accounts.php ATM
+  if ($config->accountStore == '\CCNode\AccountStoreDefault') {
+    require '../vendor/credit-commons/cc-php-lib/examples/accountstore.config.php'; // only applies to accounts.php ATM
     exit;
   }
 }?>
@@ -58,7 +59,7 @@ if ($_POST) {
     echo "Do 'composer require credit-commons/cc-demo-accountstore' to use the default AccountStore";
   }
   elseif ($accStore == '\CCNode\AccountStoreDefault' and !file_exists(DEFAULT_ACCOUNT_STORE_DATA_FILE)) {
-    copy('../vendor/credit-commons/cc-demo-accountstore/accountstore.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
+    copy('../vendor/credit-commons/cc-php-lib/examples/accountstore.json.example', DEFAULT_ACCOUNT_STORE_DATA_FILE);
     echo DEFAULT_ACCOUNT_STORE_DATA_FILE." file created.";
   }
   if (empty($_POST['db']['name'])) {
