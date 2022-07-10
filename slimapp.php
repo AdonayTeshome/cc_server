@@ -135,7 +135,12 @@ $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Res
   global $node;
   $uuid = array_shift($args);
   $params = $request->getQueryParams();
-  $transaction = $node->getTransaction($uuid, $params['entries'] ?? 'false');
+  if ($params['entries'] == 'true') {
+    $transaction = $node->getTransaction($uuid);
+  }
+  else {
+    $transaction = $node->getTransactionEntries($uuid);
+  }
   return json_response($response, $transaction);
 }
 )->setName('getTransaction')->add(PermissionMiddleware::class);
