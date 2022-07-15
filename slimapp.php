@@ -95,7 +95,7 @@ $app->get('/absolutepath', function (Request $request, Response $response) {
 
 // Conceivably acc_paths could be up to 10 items deep.
 $acc_path = '/{acc_path1}[/[{acc_path2}[/[{acc_path3}[/]]]]]';
-$app->get("/accounts/names[$acc_path]", function (Request $request, Response $response, $args) {
+$app->get("/account/names[$acc_path]", function (Request $request, Response $response, $args) {
   global $node;
   $acc_path = extractAccPathParams($args, $request);
   $limit = $request->getQueryParams()['limit'] ??'10';
@@ -134,12 +134,12 @@ $uuid_regex = '[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}'
 $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Response $response, $args) {
   global $node;
   $uuid = array_shift($args);
-  $params = $request->getQueryParams();
+  $params = $request->getQueryParams() + ['entries' => 'false'];
   if ($params['entries'] == 'true') {
-    $transaction = $node->getTransaction($uuid);
+    $transaction = $node->getTransactionEntries($uuid);
   }
   else {
-    $transaction = $node->getTransactionEntries($uuid);
+    $transaction = $node->getTransaction($uuid);
   }
   return json_response($response, $transaction);
 }
@@ -186,6 +186,10 @@ $app->patch('/transaction/{uuid:'.$uuid_regex.'}/{dest_state}', function (Reques
 $app->get("/transactions", function (Request $request, Response $response, $args) {
   global $node;
   $params = $request->getQueryParams();
+  // @todo 
+  list ($params['sort'], $params['dir']) = explode(',', $params['sort']);
+  list ($params['offset'], $params['limit']) = explode(',', $params['pager']);
+  unset($params['pager']);
   return json_response($response, $node->filterTransactions($params));
 }
 )->setName('filterTransactions')->add(PermissionMiddleware::class);

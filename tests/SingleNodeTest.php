@@ -48,14 +48,14 @@ class SingleNodeTest extends TestBase {
 
   function testAccountNames() {
     $chars = substr(reset($this->adminAccIds), 0, 2);
-    $this->sendRequest("accounts/names/$chars", 'PermissionViolation');
-    $results = $this->sendRequest("accounts/names/$chars", 200, reset($this->normalAccIds));
+    $this->sendRequest("account/names/$chars", 'PermissionViolation');
+    $results = $this->sendRequest("account/names/$chars", 200, reset($this->normalAccIds));
     // Should be a list of account names including 'a'
     foreach ($results as $acc_id) {
       $this->assertStringContainsString($chars, $acc_id, "$acc_id should contain $chars");
     }
     if (count($results) > 1){
-      $second_result = $this->sendRequest("accounts/names/$chars?limit=1", 200, reset($this->normalAccIds));
+      $second_result = $this->sendRequest("account/names/$chars?limit=1", 200, reset($this->normalAccIds));
       $this->assertEquals(1, count($second_result));
     }
   }
@@ -77,7 +77,7 @@ class SingleNodeTest extends TestBase {
       'metadata' => ['foo' => 'bar']
     ];
     // Two accounts the same.
-    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'SameAccountViolation', $admin, 'post', json_encode($obj));
     // Nonexisting account name
     $obj->payee = 'aaaaaaaaaaa';
     $this->sendRequest('transaction', 'PathViolation', $admin, 'post', json_encode($obj));
@@ -166,9 +166,13 @@ class SingleNodeTest extends TestBase {
     $this->assertContains('pending', $transaction->transitions);
     $this->assertEquals("validated", $transaction->state);
     $this->assertEquals('0', $transaction->version);
-    // Check that nobody else can see this transaction
-    $this->sendRequest("transaction/$transaction->uuid", 'CCViolation', $payer);
+    // Check that only the creator ($payee) can see this validated transaction.
+    $this->sendRequest("transaction/$transaction->uuid", 'PermissionViolation', $payer);
+    $this->sendRequest("transaction/$transaction->uuid?entries=true", 'PermissionViolation', $payer);
+    $this->sendRequest("transaction/$transaction->uuid", 200, $payee);
+    $this->sendRequest("transaction/$transaction->uuid?entries=true", 200, $payee);
     $this->sendRequest("transaction/$transaction->uuid", 200, $admin);
+    $this->sendRequest("transaction/$transaction->uuid?entries=true", 200, $admin);
 
     // Write the transaction
     $this->sendRequest("transaction/$transaction->uuid/pending", 'PermissionViolation', '', 'patch', json_encode($obj));
@@ -284,8 +288,8 @@ class SingleNodeTest extends TestBase {
     $this->assertlessThan(0, reset($limits)->min, "Minimum account limit was not less than zero.");
     $this->assertGreaterThan(0, reset($limits)->max, "Maximum account limit was not greater than zero.");
     // account/summary/{acc_id} is already tested
-    $this->sendRequest("account/summary", 'PermissionViolation', '');
-    $this->sendRequest("account/summary", 200, $user1);
+    $this->sendRequest("account/summary/null/null/null", 'PermissionViolation', '');
+    $this->sendRequest("account/summary/null/null/null", 200, $user1);
   }
 
   private function checkTransactions(array $all_transactions, array $filtered_uuids, array $conditions) {

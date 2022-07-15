@@ -27,7 +27,7 @@ class PermissionMiddleware {
         // Change the username for a more helpful error message.
         $user->id .= ' (trunkward)';
       }
-      throw new PermissionViolation(operation: $operationId);
+      throw new PermissionViolation();
     }
     return $next($request, $response);
   }

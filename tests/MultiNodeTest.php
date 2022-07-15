@@ -26,7 +26,7 @@ class MultiNodeTest extends SingleNodeTest {
       //because __construct is called many times.
       $local_user = reset($this->normalAccIds);
       // Find all the accounts we can in what is presumably a limited testing tree and group them by node
-      $local_and_trunkward = $this->sendRequest("accounts/names?limit=50", 200, $local_user);
+      $local_and_trunkward = $this->sendRequest("account/names/null/null/null?limit=50", 200, $local_user);
       foreach ($local_and_trunkward as $path_name) {
         if (strpos($path_name, '/')) {
           $all_accounts[] = $path_name;//local
@@ -53,7 +53,7 @@ class MultiNodeTest extends SingleNodeTest {
 
   private function getLeafwardAccounts($path_to_node, &$all_accounts) {
     $local_user = reset($this->normalAccIds);
-    $results = $this->sendRequest("accounts/names/".$path_to_node, 200, $local_user);
+    $results = $this->sendRequest("account/names/".$path_to_node, 200, $local_user);
     foreach ($results as $result) {
       if (substr($result, -1) <> '/') {
         $all_accounts[] = $result;
@@ -89,12 +89,12 @@ class MultiNodeTest extends SingleNodeTest {
     // Try to trade with two foreign accounts
     $obj['payer'] = reset($foreign_node);
     $obj['payee'] = end($foreign_node);
-    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'SameAccountViolation', $admin, 'post', json_encode($obj));
 
     // Try to trade with a mirror account.
     $obj['payee'] = reset($local_accounts);
     $obj['payer'] = reset($remote_accounts);
-    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'SameAccountViolation', $admin, 'post', json_encode($obj));
   }
 
   function test3rdParty() {
@@ -112,7 +112,7 @@ class MultiNodeTest extends SingleNodeTest {
       'metadata' => ['foo' => 'bar']
     ];
     // test that admin can't even do a transaction between two foreign accounts
-    $this->sendRequest('transaction', 'WrongAccountViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'SameAccountViolation', $admin, 'post', json_encode($obj));
     $obj->payee = reset($foreign_node);
     $obj->payer = reset($local_accounts);
     $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
@@ -160,7 +160,7 @@ class MultiNodeTest extends SingleNodeTest {
     foreach ($foreign_accounts_grouped as $node_path => $accounts) {
       $this->sendRequest("account/summary/$node_path/", 200, $user1);
       $this->sendRequest("account/limits/$node_path/", 200, $user1);
-      $this->sendRequest("accounts/names/$node_path/", 200, $user1);
+      $this->sendRequest("account/names/$node_path/", 200, $user1);
     }
 
     // test 3 random addresses (with not more than one slash in)
