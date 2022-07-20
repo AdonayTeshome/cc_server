@@ -12,7 +12,7 @@ use CreditCommons\Exceptions\PathViolation;
 class AddressResolverTest extends \PHPUnit\Framework\TestCase {
 
   public static function setUpBeforeClass(): void {
-    global $config, $addressResolver, $user, $local_accounts, $branch_accounts;
+    global $cc_config, $addressResolver, $cc_user, $local_accounts, $branch_accounts;
 
     require_once __DIR__.'/../slimapp.php';
     $accountStore = accountStore();
@@ -31,29 +31,29 @@ class AddressResolverTest extends \PHPUnit\Framework\TestCase {
         $user = $acc;
       }
     }
-    $addressResolver = new AddressResolver($accountStore, $config->absPath);
+    $addressResolver = new AddressResolver($accountStore, $cc_config->absPath);
   }
 
   // test pathnames to actual accounts
   function testLocalOrRemoteAcc() {
-    global $addressResolver, $local_accounts, $config;
+    global $addressResolver, $local_accounts, $cc_config;
     // test different kinds of path with each function.
     $local_account = reset($local_accounts);
     $acc = $addressResolver->localOrRemoteAcc($local_account);
     $this->assertInstanceOf('\CCNode\Accounts\User', $acc);
     $this->assertEquals('', $local_account);
 
-    $local_account = $config->nodeName .'/'. reset($local_accounts);
+    $local_account = $cc_config->nodeName .'/'. reset($local_accounts);
     $acc = $addressResolver->localOrRemoteAcc($local_account);
     $this->assertInstanceOf('\CCNode\Accounts\User', $acc);
     $this->assertEquals($local_account, '');
 
-    $local_account = $config->trunkwardAcc .'/'. $config->nodeName .'/'. reset($local_accounts);
+    $local_account = $cc_config->trunkwardAcc .'/'. $cc_config->nodeName .'/'. reset($local_accounts);
     $acc = $addressResolver->localOrRemoteAcc($local_account);
     $this->assertInstanceOf('\CCNode\Accounts\User', $acc);
     $this->assertEquals($local_account, '');
 
-    $local_account = $config->trunkwardAcc .'/'. $config->nodeName .'/'. reset($local_accounts) . '/'.'blah/blah';
+    $local_account = $cc_config->trunkwardAcc .'/'. $cc_config->nodeName .'/'. reset($local_accounts) . '/'.'blah/blah';
     $acc = $addressResolver->localOrRemoteAcc($local_account);
     $this->assertInstanceOf('\CCNode\Accounts\User', $acc);
     $this->assertEquals($local_account, 'blah/blah');
@@ -80,7 +80,7 @@ class AddressResolverTest extends \PHPUnit\Framework\TestCase {
 
   // Test local or remote fragments for autocomplete.
   function testNodeAndFragment() {
-    global $addressResolver, $local_accounts, $branch_accounts, $config;
+    global $addressResolver, $local_accounts, $branch_accounts, $cc_config;
 
     $fragment = 'a';
     $acc = $addressResolver->nodeAndFragment($fragment);
@@ -104,8 +104,8 @@ class AddressResolverTest extends \PHPUnit\Framework\TestCase {
       $this->assertEquals($branch_path, '/');
     }
 
-    if ($config->trunkwardAcc) {
-      $foreign_node = $config->trunkwardAcc .'/';
+    if ($cc_config->trunkwardAcc) {
+      $foreign_node = $cc_config->trunkwardAcc .'/';
       $acc = $addressResolver->nodeAndFragment($foreign_node);
       $this->assertInstanceOf('\CCNode\Accounts\Trunkward', $acc);
     }
@@ -123,7 +123,7 @@ class AddressResolverTest extends \PHPUnit\Framework\TestCase {
 
   // seems superfluous
   function _testNearestNode() {
-    global $addressResolver, $config, $local_accounts, $branch_accounts;
+    global $addressResolver, $cc_config, $local_accounts, $branch_accounts;
   }
 
   function testRemoteNode() {

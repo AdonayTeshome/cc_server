@@ -107,8 +107,8 @@ class TestBase extends TestCase {
 
 
   function loadAccounts() {
-    global $config;
-    $this->nodePath = explode('/', $config->absPath);
+    global $cc_config;
+    $this->nodePath = explode('/', $cc_config->absPath);
     $this->rawAccounts = (array)json_decode(file_get_contents('accountstore.json'));
 
     foreach ($this->rawAccounts as $acc_id => $acc) {
@@ -122,7 +122,7 @@ class TestBase extends TestCase {
         }
       }
       elseif (!empty($acc->url)) {
-        if ($acc->id == $config->trunkwardAcc) {
+        if ($acc->id == $cc_config->trunkwardAcc) {
           $this->trunkwardId = $acc_id;
         }
         else {

@@ -14,13 +14,13 @@ namespace CCServer\Tests;
 class MultiNodeTest extends SingleNodeTest {
 
   function __construct() {
-    global $local_accounts, $foreign_accounts_grouped, $foreign_accounts, $remote_accounts, $config;
+    global $local_accounts, $foreign_accounts_grouped, $foreign_accounts, $remote_accounts, $cc_config;
     parent::__construct();
     $this->truncate('credcom_leaf');
     $this->truncate('credcom_branch1');
     $this->truncate('credcom_branch2');
     $this->truncate('credcom_trunk');
-    $this->nodePath = explode('/', $config->absPath);
+    $this->nodePath = explode('/', $cc_config->absPath);
 
     if (!$local_accounts) {
       //because __construct is called many times.
@@ -177,7 +177,7 @@ class MultiNodeTest extends SingleNodeTest {
   }
 
   function testTrunkwards() {
-    global $config;
+    global $cc_config;
     if (empty($this->trunkwardId)) {
       $this->assertEquals(1, 1);
       return;
@@ -185,7 +185,7 @@ class MultiNodeTest extends SingleNodeTest {
     $this->sendRequest("absolutepath", 'PermissionViolation', '');
     $nodes = $this->sendRequest("absolutepath", 200, reset($this->normalAccIds));
     $this->assertGreaterThan(1, count($nodes), 'Absolute path did not return more than one node: '.reset($nodes));
-    $this->assertEquals($config->nodeName, end($nodes), 'Absolute path does not end with the current node.');
+    $this->assertEquals($cc_config->nodeName, end($nodes), 'Absolute path does not end with the current node.');
   }
 
 }

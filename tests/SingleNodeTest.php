@@ -12,14 +12,14 @@ class SingleNodeTest extends TestBase {
   const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-openapi-3.0.yml';
 
   function __construct() {
-    global $config;
+    global $cc_config;
     parent::__construct();
-    $config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
+    $cc_config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
     // Clear the database for single node test only.
-    if ($config->devMode and get_called_class() == get_class()) {
+    if ($cc_config->devMode and get_called_class() == get_class()) {
       $this->truncate();
     }
-    $config->devMode = 1;
+    $cc_config->devMode = 1;
     $this->loadAccounts();
   }
 
@@ -84,9 +84,9 @@ class SingleNodeTest extends TestBase {
     $obj->payee = reset($this->adminAccIds);
     $obj->quant = 9999999;
     $this->sendRequest('transaction', 'TransactionLimitViolation', $admin, 'post', json_encode($obj));
-    global $config;
+    global $cc_config;
     $obj->quant = 0;
-    if ($config->zeroPayments) {
+    if ($cc_config->zeroPayments) {
       $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
     }
     else {

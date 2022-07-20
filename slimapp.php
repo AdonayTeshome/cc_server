@@ -56,14 +56,20 @@ $app->get('/', function (Request $request, Response $response) {
   exit;
 });
 
-global $node, $config;
-$config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
-if ($config->devMode) {
+/**
+ * globals created in PermissionMiddleware are:
+ * $node, $cc_config, $cc_workflows, $cc_user
+ */
+global $node, $cc_config;
+// creates globals $cc_config, $cc_workflows, $cc_user
+$node = new \CCNode\Node(parse_ini_file('node.ini'));
+
+if ($cc_config->devMode) {
   ini_set('display_errors', '1');
   // this stops execution on ALL warnings and returns CCError objects
   set_error_handler( '\exception_error_handler' );
 }
-$node = new \CCNode\Node($config);
+
 
 /**
  * Implement the Credit Commons API methods
@@ -76,8 +82,8 @@ $app->options('/{id:.*}', function (Request $request, Response $response, $args)
 )->setName('permittedEndpoints')->add(PermissionMiddleware::class);
 
 $app->get('/workflows', function (Request $request, Response $response) {
-  global $node;
-  return json_response($response, $node->getWorkflows());
+  global $cc_workflows;
+  return json_response($response, $cc_workflows);
 }
 )->setName('workflows')->add(PermissionMiddleware::class);
 
@@ -147,7 +153,7 @@ $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Res
 
 // Create a new transaction
 $app->post('/transaction', function (Request $request, Response $response) {
-  global $user, $node;
+  global $cc_user, $node;
 // TODO try $request->getparsedBody()
   $request->getBody()->rewind(); // Testing Framework Middleware leaves this at the end.
   $data = json_decode($request->getBody()->getContents());
@@ -163,11 +169,11 @@ $app->post('/transaction', function (Request $request, Response $response) {
 
 // Relay a new transaction
 $app->post('/transaction/relay', function (Request $request, Response $response) {
-  global $user, $node;
+  global $cc_user, $node;
   $request->getBody()->rewind(); // ValidationMiddleware leaves this at the end.
   $data = json_decode($request->getBody()->getContents());
   // Convert the incoming amounts as soon as possible.
-  $user->convertIncomingEntries($data->entries);
+  $cc_user->convertIncomingEntries($data->entries);
   $transaction = TransversalTransaction::createFromUpstream($data);
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
   // $additional_entries via jsonSerialize
@@ -186,10 +192,14 @@ $app->patch('/transaction/{uuid:'.$uuid_regex.'}/{dest_state}', function (Reques
 $app->get("/transactions", function (Request $request, Response $response, $args) {
   global $node;
   $params = $request->getQueryParams();
-  // @todo 
-  list ($params['sort'], $params['dir']) = explode(',', $params['sort']);
-  list ($params['offset'], $params['limit']) = explode(',', $params['pager']);
-  unset($params['pager']);
+  // @todo update the api so these transformations are not needed.
+  if (isset($params['sort'])) {
+    list ($params['sort'], $params['dir']) = explode(',', $params['sort']);
+  }
+  if (isset($params['pager'])) {
+    list ($params['offset'], $params['limit']) = explode(',', $params['pager']);
+    unset($params['pager']);
+  }
   return json_response($response, $node->filterTransactions($params));
 }
 )->setName('filterTransactions')->add(PermissionMiddleware::class);

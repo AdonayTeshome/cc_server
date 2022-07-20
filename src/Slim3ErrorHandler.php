@@ -18,8 +18,8 @@ class Slim3ErrorHandler {
    * protected and therefore lost during json_encode
    */
   public function __invoke($request, $response, $exception) {
-    global $user, $config;
-    if ($config->devMode) {
+    global $cc_user, $cc_config;
+    if ($cc_config->devMode) {
       file_put_contents('last_exception.log', print_r($exception, 1)); //temp
     }
     $exception_class = explode('\\', get_class($exception));
@@ -49,12 +49,12 @@ class Slim3ErrorHandler {
       $output->user = $exception->user;
     }
     else {
-      $output->node = $config->nodeName;
+      $output->node = $cc_config->nodeName;
       $output->trace = $exception->getTraceAsString(); //experimental;
       $output->break = $exception->getFile() .': '.$exception->getLine();
       $output->method = $request->getMethod();
       $output->path = $request->geturi()->getPath();
-      $output->user = $user ? $user->id : '-anon-';
+      $output->user = $cc_user ? $cc_user->id : '-anon-';
       if ($q = $request->geturi()->getQuery()){
         $output->path .= '?'.$q;
       }
