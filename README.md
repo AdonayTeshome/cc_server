@@ -15,11 +15,12 @@ PHP and Mysql are widely used and trusted over the long term, and the languages 
 
 ## Installation
 ### Prerequisites
-1. PHP 8
+1. PHP 8 with mysqli 
 1. mariaDB / Mysql
 1. composer
 1. A web server (currently only apache2 is supported)
 1. A REST Client which implements thte Credit Commons protocol
+1. The web server may need write access to the root directory either to edit node.ini or if are using the default accountstore, to write to accountstore.json
 
 ### Options
 Combinations of seven packages support several scenarios:
