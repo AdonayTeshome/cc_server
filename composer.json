@@ -20,7 +20,7 @@
     {
       "type": "gitlab",
       "url": "git@gitlab.com:credit-commons/cc-php-lib"
-    },
+    }
   ],
   "require": {
     "credit-commons/cc-node": "@dev",

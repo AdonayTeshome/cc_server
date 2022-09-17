@@ -44,7 +44,7 @@ $errs = [];
     <?php endif; ?>
 <?php
 if (!empty($_SERVER['QUERY_STRING'])){
-  if ($config->accountStore == '\CCNode\AccountStoreDefault') {
+  if ($config->accountStore == '\Examples\AccountStore') {
     require '../vendor/credit-commons/cc-php-lib/examples/accountstore.config.php'; // only applies to accounts.php ATM
     exit;
   }
@@ -75,7 +75,7 @@ if ($_POST) {
     $connection = new mysqli('localhost', $config->dbCreds['user'], $config->dbCreds['pass']);
     $connection->query("DROP DATABASE ".$config->dbCreds['name']);
     $connection->query("CREATE DATABASE ".$config->dbCreds['name']);
-    CCNode\Db::connect($config->dbCreds['name'], $config->dbCreds['user'], $config->dbCreds['pass'], $config->dbCreds['server']);
+    config_connect($config);
     foreach (explode(';', file_get_contents('../vendor/credit-commons/cc-node/install.sql')) as $q) {
       if ($query = trim($q)) {
         $success = CCNode\Db::query($query);
@@ -107,27 +107,15 @@ if ($_POST) {
       <input type="submit" value="(Re)Install database">
     </form>
   </body>
-</html><?php
-/**
- * load or save the set of accounts directly to the file.
- * @param array $accounts
- * @return array
- */
-function editable_accounts(array $accounts = []) : array {
-  if ($accounts) {//save
-    foreach ($accounts as $id => &$account) {
-      $account->id = $id;
-      if ($account->max === '')$account->max = NULL;
-      if ($account->min === '')$account->min = NULL;
-      $account->admin = (bool)@$account->admin;
-    }
-    file_put_contents(DEFAULT_ACCOUNT_STORE_DATA_FILE, json_encode($accounts));
-    return [];
-  }
-  else {
-    return (array)json_decode(file_get_contents(DEFAULT_ACCOUNT_STORE_DATA_FILE));
-  }
-}
-?>
+</html>
 
 <p><a href="https://gitlab.com/credit-commons/cc-dev-client/-/blob/master/INSTALL.md">About</a> the developer client</p>
+<?php
+function config_connect($config) {
+  CCNode\Db::connect(
+    $config->dbCreds['name'],
+    $config->dbCreds['user'],
+    $config->dbCreds['pass'],
+    $config->dbCreds['server']
+  );
+}

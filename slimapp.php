@@ -9,6 +9,7 @@
 use CCServer\Slim3ErrorHandler;
 use CCServer\PermissionMiddleware;
 use CCNode\Transaction\TransversalTransaction;
+use CCNode\Transaction\Transaction;
 use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCFailure;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -82,7 +83,7 @@ $app->options('/{id:.*}', function (Request $request, Response $response, $args)
 )->setName('permittedEndpoints')->add(PermissionMiddleware::class);
 
 $app->get('/workflows', function (Request $request, Response $response) {
-  global $cc_workflows;
+  global $cc_workflows; //is created when $node is instantiated
   return json_response($response, $cc_workflows);
 }
 )->setName('workflows')->add(PermissionMiddleware::class);
@@ -151,7 +152,7 @@ $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Res
 }
 )->setName('getTransaction')->add(PermissionMiddleware::class);
 
-// Create a new transaction
+// The client sends a new transaction
 $app->post('/transaction', function (Request $request, Response $response) {
   global $cc_user, $node;
 // TODO try $request->getparsedBody()
@@ -159,15 +160,14 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $data = json_decode($request->getBody()->getContents());
   // validate the input and create UUID
   $new_transaction = NewTransaction::createFromLeaf($data);
-  // Send the whole transaction back via jsonserialize to the user.
-  // the workflow ultimately determines whether the transaction is temp or written
-  $transaction = $node->submitNewTransaction($new_transaction);
-  $status_code = $transaction->version < 1 ? 200 : 201;
+  $transaction = Transaction::createFromNew($new_transaction); // in state 'init'
+  $new_rows = $node->buildValidateRelayTransaction($transaction);
+  $status_code = $transaction->version < 1 ? 200 : 201; // depends on workflow
   return json_response($response, $transaction, $status_code);
 }
 )->setName('newTransaction')->add(PermissionMiddleware::class);
 
-// Relay a new transaction
+// An upstream node is sending a new transaction.
 $app->post('/transaction/relay', function (Request $request, Response $response) {
   global $cc_user, $node;
   $request->getBody()->rewind(); // ValidationMiddleware leaves this at the end.
