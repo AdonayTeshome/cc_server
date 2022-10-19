@@ -1,5 +1,4 @@
-<?php
-use CreditCommons\AccountStoreInterface;
+<?
 ini_set('display_errors', 1);
 
 if (!is_dir('../vendor')) {

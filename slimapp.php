@@ -14,6 +14,7 @@ use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCFailure;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use CreditCommons\Exceptions\CCViolation;
 
 // Slim4 (when the League\OpenAPIValidation is ready)
 //use Slim\Factory\AppFactory;
@@ -49,8 +50,10 @@ $getErrorHandler = function ($c) {
 $c['errorHandler'] = $getErrorHandler;
 $c['phpErrorHandler'] = $getErrorHandler;
 
+
 /**
  * Default HTML page. (Not part of the API)
+ * Since this exists as an actual file, it should be handled by .htaccess
  */
 $app->get('/', function (Request $request, Response $response) {
   header('Location: index.html');
@@ -58,7 +61,7 @@ $app->get('/', function (Request $request, Response $response) {
 });
 
 /**
- * globals created in PermissionMiddleware are:
+ * Globals created in PermissionMiddleware are:
  * $node, $cc_config, $cc_workflows, $cc_user
  */
 global $node, $cc_config;
@@ -71,67 +74,91 @@ if ($cc_config->devMode) {
   set_error_handler( '\exception_error_handler' );
 }
 
-
 /**
  * Implement the Credit Commons API methods
  */
-$app->options('/{id:.*}', function (Request $request, Response $response, $args) {
+$app->options('/', function (Request $request, Response $response, $args) {
   global $node;
   $options = empty($args['id']) ? $node->getOptions() : [];
-  return json_response($response, $options);
+  return json_response($response, ['data' => $options]);
 }
 )->setName('permittedEndpoints')->add(PermissionMiddleware::class);
 
+
 $app->get('/workflows', function (Request $request, Response $response) {
   global $cc_workflows; //is created when $node is instantiated
-  return json_response($response, $cc_workflows);
+  return json_response($response, ['data' => $cc_workflows]);
 }
 )->setName('workflows')->add(PermissionMiddleware::class);
 
 $app->get('/handshake', function (Request $request, Response $response) {
   global $node;
-  return json_response($response, $node->handshake());
+  return json_response($response, ['data' => $node->handshake()]);
 }
 )->setName('handshake')->add(PermissionMiddleware::class);
 
 $app->get('/absolutepath', function (Request $request, Response $response) {
   global $node;
-  return json_response($response, $node->getAbsolutePath());
+  return json_response($response, ['data' => $node->getAbsolutePath()]);
 }
 )->setName('absolutePath')->add(PermissionMiddleware::class);
 
-// Conceivably acc_paths could be up to 10 items deep.
-$acc_path = '/{acc_path1}[/[{acc_path2}[/[{acc_path3}[/]]]]]';
-$app->get("/account/names[$acc_path]", function (Request $request, Response $response, $args) {
+$app->get("/convert", function (Request $request, Response $response, $args) {
+  // get the downstream rate and multiply it by the current rate
   global $node;
-  $acc_path = extractAccPathParams($args, $request);
-  $limit = $request->getQueryParams()['limit'] ??'10';
+  $query_params = $request->getQueryParams();
+  if (!isset($query_params['node_path'])) {
+    throw new CCViolation('Missing query param: node_path');
+  }
+  // Ensure the path has a final slash to identify it as a node, not an account?
+  return json_response($response, ['data' => $node->convertPrice($query_params['node_path'])]);
+}
+)->setName('convertPrice')->add(PermissionMiddleware::class);//must be logged in to know which way to convert the price.
+
+$app->get("/account/names", function (Request $request, Response $response, $args) {
+  global $node;
+  $query_params = $request->getQueryParams();
+  $limit = $query_params['limit'] ??'10';
   // Assuming the limit is 10.
-  $names = $node->accountNameFilter($acc_path, $limit);
-  return json_response($response, $names);
+  $names = $node->accountNameFilter($query_params['acc_path']??'', $limit);
+  return json_response($response, ['data' => $names]);
 }
 )->setName('accountNameFilter')->add(PermissionMiddleware::class);
 
-$app->get("/account/summary[$acc_path]", function (Request $request, Response $response, $args) {
+$app->get("/account/summary", function (Request $request, Response $response, $args) {
   global $node;
-  $acc_path = extractAccPathParams($args, $request);
-  return json_response($response, $node->getAccountSummary($acc_path));
+  $query_params = $request->getQueryParams();
+  $acc_path = $query_params['acc_path']??'';
+  $content = $node->getAccountSummary($acc_path);
+  return json_response($response, ['data' => $content]);
 }
 )->setName('accountSummary')->add(PermissionMiddleware::class);
 
-$app->get("/account/limits[$acc_path]", function (Request $request, Response $response, $args) {
+$app->get("/account/limits", function (Request $request, Response $response, $args) {
   global $node;
-  $acc_path = extractAccPathParams($args, $request);
-  return json_response($response, $node->getAccountLimits($acc_path));
+  $query_params = $request->getQueryParams();
+  $acc_path = $query_params['acc_path']??'';
+  $content = $node->getAccountLimits($acc_path);
+  return json_response($response, ['data' => (object)$content]);
 }
 )->setName('accountLimits')->add(PermissionMiddleware::class);
 
-$app->get("/account/history[$acc_path]", function (Request $request, Response $response, $args) {
+$app->get("/account/history", function (Request $request, Response $response, $args) {
   global $node;
-  $acc_path = extractAccPathParams($args, $request);
-  $params = $request->getQueryParams() + ['samples' => -1];
-  $result = $node->getAccountHistory($acc_path, $params['samples']);
-  $response->getBody()->write(json_encode($result));
+  $query_params = $request->getQueryParams();
+  $acc_path = $query_params['acc_path'];
+  unset($query_params['acc_path']);
+  if (!$acc_path) {
+    throw new CCViolation ('Missing query param: acc_path');
+  }
+  $params = $query_params + ['samples' => -1];
+  $points = $node->getAccountHistory($acc_path, $params['samples']);
+  $times = array_keys($points);
+  $content = [
+    'data' => $points,
+    'meta' => ['min' => min($points), 'max' => max($points), 'points' => count($points), 'start' => min($times), 'end'=>max($times)]
+  ];
+  $response->getBody()->write(json_encode($content));
   return $response;
 }
 )->setName('accountHistory')->add(PermissionMiddleware::class);
@@ -144,11 +171,12 @@ $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Res
   $params = $request->getQueryParams() + ['entries' => 'false'];
   if ($params['entries'] == 'true') {
     $transaction = $node->getTransactionEntries($uuid);
+    return json_response($response, ['data' => $transaction]);
   }
   else {
     $transaction = $node->getTransaction($uuid);
+    return json_response($response, ['data' => $transaction, 'links' => $transaction->transitions()]);
   }
-  return json_response($response, $transaction);
 }
 )->setName('getTransaction')->add(PermissionMiddleware::class);
 
@@ -159,25 +187,26 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $request->getBody()->rewind(); // Testing Framework Middleware leaves this at the end.
   $data = json_decode($request->getBody()->getContents());
   // validate the input and create UUID
-  $new_transaction = NewTransaction::createFromLeaf($data);
+  $new_transaction = NewTransaction::create($data);
   $transaction = Transaction::createFromNew($new_transaction); // in state 'init'
-  $new_rows = $node->buildValidateRelayTransaction($transaction);
+  $additional_entries = $node->buildValidateRelayTransaction($transaction);
   $status_code = $transaction->version < 1 ? 200 : 201; // depends on workflow
-  return json_response($response, $transaction, $status_code);
+
+  return json_response($response, ['data' => $transaction, 'links' => $transaction->transitions()], $status_code);
 }
 )->setName('newTransaction')->add(PermissionMiddleware::class);
 
 // An upstream node is sending a new transaction.
 $app->post('/transaction/relay', function (Request $request, Response $response) {
-  global $cc_user, $node;
+  global $cc_user, $node, $cc_config;
   $request->getBody()->rewind(); // ValidationMiddleware leaves this at the end.
   $data = json_decode($request->getBody()->getContents());
   // Convert the incoming amounts as soon as possible.
-  $cc_user->convertIncomingEntries($data->entries);
   $transaction = TransversalTransaction::createFromUpstream($data);
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
+  $status_code = $transaction->version < 1 ? 200 : 201; // depends on workflow
   // $additional_entries via jsonSerialize
-  return json_response($response, $additional_entries, 201);
+  return json_response($response, ['data' => array_values($additional_entries)], $status_code);
 }
 )->setName('relayTransaction')->add(PermissionMiddleware::class);
 
@@ -200,7 +229,13 @@ $app->get("/transactions", function (Request $request, Response $response, $args
     list ($params['offset'], $params['limit']) = explode(',', $params['pager']);
     unset($params['pager']);
   }
-  return json_response($response, $node->filterTransactions($params));
+  $body = $node->filterTransactions($params);
+  $content = [
+    'data' => $body,
+    'meta' => ['number_of_results' => count($body)],
+    'links' => ['first' => 'http://blah?first', 'prev' => 'http://blah?prev', 'next' => 'http://blah?next', 'last' => 'http://blah?last']
+  ];
+  return json_response($response, $content);
 }
 )->setName('filterTransactions')->add(PermissionMiddleware::class);
 
@@ -237,21 +272,4 @@ function json_response(Response $response, $body = NULL, int $code = 200) : Resp
  */
 function exception_error_handler( $severity, $message, $file, $line ) {
   throw new CCFailure("$message in $file: $line");
-}
-
-/**
- * Currently the testing framework doesn't allow optional args,
- * So paths accept 3 and only 3 args which are populated by null
- * @param array $args
- */
-function extractAccPathParams(array &$args, Request $request) : string {
-  while (end($args) == 'null') {
-    array_pop($args);
-  }
-  $path = implode('/', $args);
-  // It is important to preserve the trailing slash.
-  if (substr($request->getUri(), -1) == '/') {
-    $path .= '/';
-  }
-  return $path;
 }

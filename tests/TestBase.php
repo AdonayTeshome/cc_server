@@ -6,7 +6,7 @@ use League\OpenAPIValidation\PSR15\ValidationMiddlewareBuilder;
 use League\OpenAPIValidation\PSR15\SlimAdapter;
 use Slim\Psr7\Response;
 use PHPUnit\Framework\TestCase;
-use function CCNode\accountStore;
+use Nyholm\Psr7\Factory\Psr17Factory;
 
 class TestBase extends TestCase {
 
@@ -28,16 +28,7 @@ class TestBase extends TestCase {
       $path = strstr($path, '?', TRUE);
       parse_str(substr($query, 1), $params);
     }
-    // This is a medium term hack to get around OpenAPI not supporting optional path parameters.
-    if (substr($path, 0, 7) == 'account' and count(explode('/', $path)) > 2) {
-      $trailing_slash = substr($path, -1) == '/' ? '/' : '';
-      $subpath = implode('/', array_slice(explode('/', $path), 2));
-      $old_subpath = $subpath;
-      \CreditCommons\NodeRequester::prepareAccPath($subpath);
-      $path = str_replace($old_subpath, $subpath, $path) . $trailing_slash;
-    }
-
-    $request = $this->getRequest($path, $method);
+    $request = $this->getRequest($path, strtoupper($method));
     if (isset($params)) {
       $request = $request->withQueryParams($params);
     }
@@ -51,35 +42,39 @@ class TestBase extends TestCase {
     }
     $response = $this->getApp()->process($request, new Response());
     $response->getBody()->rewind();
-    $contents = json_decode($response->getBody()->getContents());
+    $raw_contents = $response->getBody()->getContents();
+    $contents = json_decode($raw_contents);
     $status_code = $response->getStatusCode();
     if (is_int($expected_response)) {
       if ($status_code <> $expected_response) {
         // Blurt out to terminal to ensure all info is captured.
-        echo "\n $acc_id got unexpected code ".$status_code." on $path: ".print_r($contents, 1);
+        echo "\n $acc_id got unexpected code ".$status_code." on $path:"; print_r($raw_contents);
       }
       $this->assertEquals($expected_response, $status_code);
+      return $contents;
     }
     elseif (is_string($expected_response)) {
       // $expected_response is the classname of the error.
-      if (isset($contents->class)) {
-        $err = \CreditCommons\NodeRequester::reconstructCCErr($contents);
+      if (!empty($contents->errors) and is_array($contents->errors)) {
+        $error = $contents->errors[0];
+        $err = \CreditCommons\NodeRequester::reconstructCCErr($error);
         $class = "\\CreditCommons\Exceptions\\$expected_response";
         if (!$err instanceof $class) {
           echo "\nUnexpected error: ".print_r($err, 1);
         }
         $this->assertInstanceOf($class, $err);
+        return $error;
       }
       else {
         echo "\nExpected $expected_response but got: ".print_r($contents, 1);
         $this->assertEquals(1, 0, 'Expected error but got something else.');
       }
+      return NULL;
     }
-    return $contents;
   }
 
   protected function getRequest($path, $method = 'GET') {
-    $psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+    $psr17Factory = new Psr17Factory();
     return $psr17Factory->createServerRequest(strtoupper($method), '/'.$path);
   }
 
@@ -114,13 +109,13 @@ class TestBase extends TestCase {
       $this->rawAccounts = (array)json_decode(file_get_contents('accountstore.json'));
     }
     else {
-      die('Testing requires account auth strings which can only be obtained using the example AccountStore. To test the Accountstore see tests/AccountStoreTest');
+      die('Testing requires account auth strings which can only be obtained using the example AccountStore. This node uses '.$cc_config->accountStore.'. To test the Accountstore see tests/AccountStoreTest');
     }
 
     foreach ($this->rawAccounts as $acc_id => $acc) {
       if (!empty($acc->key)) {
         $this->passwords[$acc_id] = $acc->key;
-        if ($acc->admin) {
+        if (isset($acc->admin) and $acc->admin) {
           $this->adminAccIds[] = $acc_id;
         }
         else {

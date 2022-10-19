@@ -20,13 +20,16 @@ class MultiNodeTest extends SingleNodeTest {
     $this->truncate('credcom_branch1');
     $this->truncate('credcom_branch2');
     $this->truncate('credcom_trunk');
+    file_put_contents('ccleaf.debug', '');
+    file_put_contents('../cc-branch1/ccbranch1.debug', '');
+    file_put_contents('../cc-trunk/cctrunk.debug', '');
     $this->nodePath = explode('/', $cc_config->absPath);
 
     if (!$local_accounts) {
       //because __construct is called many times.
       $local_user = reset($this->normalAccIds);
       // Find all the accounts we can in what is presumably a limited testing tree and group them by node
-      $local_and_trunkward = $this->sendRequest("account/names/null/null/null?limit=50", 200, $local_user);
+      $local_and_trunkward = $this->sendRequest("account/names?limit=50", 200, $local_user)->data;
       foreach ($local_and_trunkward as $path_name) {
         if (strpos($path_name, '/')) {
           $all_accounts[] = $path_name;//local
@@ -51,10 +54,10 @@ class MultiNodeTest extends SingleNodeTest {
     }
   }
 
-  private function getLeafwardAccounts($path_to_node, &$all_accounts) {
+  private function getLeafwardAccounts($acc_path, &$all_accounts) {
     $local_user = reset($this->normalAccIds);
-    $results = $this->sendRequest("account/names/".$path_to_node, 200, $local_user);
-    foreach ($results as $result) {
+    $results = $this->sendRequest("account/names?acc_path=$acc_path", 200, $local_user);
+    foreach ($results->data as $result) {
       if (substr($result, -1) <> '/') {
         $all_accounts[] = $result;
       }
@@ -62,8 +65,8 @@ class MultiNodeTest extends SingleNodeTest {
         $this->getLeafwardAccounts ($result, $all_accounts);
       }
     }
-    // Since we retrieved also trunkward accounts which we already had, dedupe.
     $all_accounts = array_unique($all_accounts);
+    // @todo test the bool 'local' queryparam
   }
 
   function testHandshake() {
@@ -75,13 +78,23 @@ class MultiNodeTest extends SingleNodeTest {
     // should find a way of testing that the inherited workflows combine properly.
   }
 
+  function testConversion() {
+    global $foreign_accounts_grouped;
+    // so just test the API
+    foreach ($foreign_accounts_grouped as $node_path => $accounts) {
+      $this->sendRequest("convert?node_path=$node_path", 200);
+      // Can't tell from here what the conversion rate should be in any given setup.
+    }
+  }
+
+
   function testBadTransactions() {
     parent::testBadTransactions();
     global $local_accounts, $foreign_accounts_grouped, $remote_accounts;
     $admin = reset($this->adminAccIds);
     $obj = [
-      'description' => 'test 3rdparty',
-      'quant' => 10,
+      'description' => 'test 3rdparty bad',
+      'quant' => 2,
       'type' => '3rdparty',
       'metadata' => ['foo' => 'bar']
     ];
@@ -106,8 +119,8 @@ class MultiNodeTest extends SingleNodeTest {
     $obj = (object)[
       'payee' => end($foreign_node),
       'payer' => reset($foreign_node),
-      'description' => 'test 3rdparty',
-      'quant' => 12,
+      'description' => 'test 3rdparty good',
+      'quant' => 3,
       'type' => '3rdparty',
       'metadata' => ['foo' => 'bar']
     ];
@@ -143,12 +156,12 @@ class MultiNodeTest extends SingleNodeTest {
       'payer' => end($local_accounts),
       'payee' => $foreign_accounts[array_rand($foreign_accounts)],
       'payee' => 'cctrunk/alice',
-      'description' => 'test bill',
-      'quant' => 10,
+      'description' => 'test transversal bill ',
+      'quant' => 4,
       'type' => 'credit',
       'metadata' => ['foo' => 'bar']
     ];
-    $tx = $this->sendRequest('transaction', 200, $obj->payer, 'post', json_encode($obj));
+    $tx = $this->sendRequest('transaction', 200, $obj->payer, 'post', json_encode($obj))->data;
     $this->sendRequest("transaction/$tx->uuid/pending", 201, $obj->payer, 'patch');
   }
 
@@ -156,11 +169,11 @@ class MultiNodeTest extends SingleNodeTest {
     parent::testAccountSummaries();
     global $local_accounts, $foreign_accounts_grouped, $foreign_accounts, $remote_accounts;
     $user1 = reset($this->normalAccIds);
-    // get all the limits
+    // get all the account details from each node.
     foreach ($foreign_accounts_grouped as $node_path => $accounts) {
-      $this->sendRequest("account/summary/$node_path/", 200, $user1);
-      $this->sendRequest("account/limits/$node_path/", 200, $user1);
-      $this->sendRequest("account/names/$node_path/", 200, $user1);
+      $this->sendRequest("account/summary?acc_path=$node_path/", 200, $user1);
+      $this->sendRequest("account/limits?acc_path=$node_path/", 200, $user1);
+      $this->sendRequest("account/names?acc_path=$node_path/", 200, $user1);
     }
 
     // test 3 random addresses (with not more than one slash in)
@@ -168,10 +181,10 @@ class MultiNodeTest extends SingleNodeTest {
     while ($i < 3) {
       $rel_acc_path = next($foreign_accounts);
       if (count(explode('/', $rel_acc_path)) > 2)continue;
-      $this->sendRequest("account/summary/$rel_acc_path", 200, $user1);
-      $this->sendRequest("account/limits/$rel_acc_path", 200, $user1);
+      $this->sendRequest("account/summary?acc_path=$rel_acc_path", 200, $user1);
+      $this->sendRequest("account/limits?acc_path=$rel_acc_path", 200, $user1);
       // This won't work because its not in the API.
-      // $this->sendRequest("account/history/$rel_acc_path", 200, $user1);
+      // $this->sendRequest("account?acc_path=history/$rel_acc_path", 200, $user1);
       $i++;
     }
   }

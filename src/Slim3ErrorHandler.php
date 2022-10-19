@@ -59,7 +59,7 @@ class Slim3ErrorHandler {
         $output->path .= '?'.$q;
       }
     }
-    return json_response($response, $output, $code??$exception->getCode());
+    return json_response($response, ['errors' => [$output]], $code??$exception->getCode());
    }
 
 }

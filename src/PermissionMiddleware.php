@@ -1,12 +1,9 @@
 <?php
 namespace CCServer;
 
-use CCNode\Db;
 use CCNode\Accounts\User;
 use CCNode\Accounts\Remote;
 use CreditCommons\Exceptions\PermissionViolation;
-use CreditCommons\Exceptions\PasswordViolation;
-use CreditCommons\Exceptions\HashMismatchFailure;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use function CCNode\accountStore;
@@ -52,19 +49,11 @@ class PermissionMiddleware {
       $acc_id = $request->getHeaderLine('cc-user');
       // Users connect with an API key which can compared directly with the database.
       if ($acc_id) {
-        $user = load_account($acc_id);
-        $auth = ($request->getHeaderLine('cc-auth') == 'null') ?
+        $auth_string = ($request->getHeaderLine('cc-auth') == 'null') ?
           NULL : // not sure how or why null is returned as a string.
           (string)$request->getHeaderLine('cc-auth');
-        if ($user instanceOf Remote) {
-          if (!$this->matchHashes($acc_id, $auth)) {
-            throw new HashMismatchFailure($acc_id);
-          }
-        }
-        elseif (!accountStore()->checkCredentials($acc_id, $auth)) {
-          //local user with the wrong password
-          throw new PasswordViolation();
-        }
+        $user = load_account($acc_id);
+        $user->authenticate($auth_string); // will throw if there's a problem
       }
       else {
         // Blank username supplied, fallback to anon
@@ -79,23 +68,5 @@ class PermissionMiddleware {
     }
     return $user;
   }
-
-  function matchHashes(string $acc_id, string $auth) : bool {
-    if (empty($auth)) {// If there is no history...
-      // this might not be super secure...
-      $query = "SELECT TRUE FROM hash_history "
-        . "WHERE acc = '$acc_id'"
-        . "LIMIT 0, 1";
-      $result = Db::query($query)->fetch_object();
-      return $result == FALSE;
-    }
-    else {
-      // Remote nodes connect with a hash of the connected account, which needs to be compared.
-      $query = "SELECT TRUE FROM hash_history WHERE acc = '$acc_id' AND hash = '$auth' ORDER BY id DESC LIMIT 0, 1";
-      $result = Db::query($query)->fetch_object();
-      return (bool)$result;// temp
-    }
-  }
-
 
 }
