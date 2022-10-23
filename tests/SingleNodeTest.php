@@ -234,44 +234,59 @@ class SingleNodeTest extends TestBase {
 
     // Filtering.
     $norm_user = reset($this->normalAccIds);
-    $results = $this->sendRequest("transactions", 200, $norm_user)->data;
-    $first_uuid = reset($results)->uuid;
+    $results = $this->sendRequest("transactions", 200, $norm_user);
+    $first_uuid = reset($results->data)->uuid;
     $this->sendRequest("transaction/$first_uuid", 200, $norm_user);
-    $this->sendRequest("transaction/$first_uuid?entries=true", 200, $norm_user);
-    // no results
-    $this->sendRequest("transactions?entries=true&description=jdksksh", 200, $norm_user);
+    $this->sendRequest("entries/$first_uuid", 200, $norm_user);
+    // No results
     $this->sendRequest("transactions?description=jdksksh", 200, $norm_user);
+    $this->sendRequest("entries?description=jdksksh", 200, $norm_user);
 
-    $results = $this->sendRequest("transactions?entries=true&description=$transaction_description", 200, $norm_user);
+    $results = $this->sendRequest("transactions?description=$transaction_description", 200, $norm_user);
     // Every result entry should contain the string
     $counts = [];
-    foreach ($results->data as $standaloneEntry) {
-      $counts[] = strpos($standaloneEntry->description, $transaction_description);
+    foreach ($results->data as $transaction) {
+      $counts[] = strpos($transaction->entries[0]->description, $transaction_description);
     }
-    $this->assertContainsOnly('int', $counts, TRUE, 'Transaction did not filter by description ');
-    $all_entries = $this->sendRequest("transactions?entries=true", 200, $norm_user)->data;
-    if (count($all_entries) < 3) {
-      echo 'Unable to test offset?pager=0,3 with only '.count($all_entries). 'entries saved.';
+    $this->assertContainsOnly('int', $counts, TRUE, 'Transaction did not filter by description.');
+    $all_entries = $this->sendRequest("entries", 200, $norm_user);
+    $this->assertEquals(count($all_entries->data), $all_entries->meta->number_of_results);
+    if (count($all_entries->data) < 3) {
+      echo 'not enough entries are written to test the filter. Only '.count($all_entries->data). ' entries saved.';
     }
     else {
-      $limited = $this->sendRequest("transactions?entries=true&pager=0,3", 200, $norm_user)->data;
+      $limited = $this->sendRequest("entries?limit=3&offset=0", 200, $norm_user)->data;
       $this->assertEquals(3, count($limited), "Pager failed to return 3 entries");
+      $limited = $this->sendRequest("entries?limit=1&offset=1", 200, $norm_user)->data;
+      $this->assertEquals(array_slice($all_entries->data, 1, 1), $limited, "The offset/limit queryparams don't work");
     }
-    $limited = $this->sendRequest("transactions?entries=true&pager=1,1", 200, $norm_user)->data;
-    $this->assertEquals(array_slice($all_entries, 1, 1), $limited, "The offset/limit queryparams don't work");
+
+    $results = $this->sendRequest("transactions", 200, $norm_user);
+    $this->assertEquals(count($results->data), $results->meta->number_of_results);
+    if (count($results->data) < 3) {
+      echo 'not enough transactions are written to test the filter. Only '.count($results->data). ' transactions saved.';
+    }
+    else {
+      $limited = $this->sendRequest("transactions?limit=3&offset=0", 200, $norm_user)->data;
+      $this->assertEquals(3, count($limited), "Pager failed to return 3 transactions");
+      $limited = $this->sendRequest("transactions?limit=1&offset=1", 200, $norm_user)->data;
+      $this->assertEquals(array_slice($results->data, 1, 1), $limited, "The offset/limit queryparams don't work");
+    }
 
     // Test the sort
-    $results = $this->sendRequest("transactions?states=erased,complete", 200, $norm_user)->data;
+    $results = $this->sendRequest("transactions?states=erased,complete", 200, $norm_user);
     $err = FALSE;
-    foreach ($results as $result) {
+    foreach ($results->data as $result) {
       if (!in_array($result->state, ['erased', 'completed'])) {
         $err = TRUE;
       }
     }
     $this->assertEquals(FALSE, $err, 'Failed to filter by 2 states.');
+    $this->assertEquals(count($results->data), $results->meta->number_of_results);
+    $this->assertObjectHasAttribute('transitions', $results->meta, 'no transitions on filter result');
 
-    $results = $this->sendRequest("transactions?involving=$payee", 200, $norm_user)->data;
-    foreach ($results as $res) {
+    $results = $this->sendRequest("transactions?involving=$payee", 200, $norm_user);
+    foreach ($results->data as $res) {
       $main = $res->entries[0];
       // Every result should have $payee as either payee or payer;
       if (strpos($main->payee, $payee) === FALSE and strpos($main->payer, $payee) === FALSE) {

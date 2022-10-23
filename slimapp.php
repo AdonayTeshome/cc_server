@@ -168,15 +168,21 @@ $uuid_regex = '[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}'
 $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Response $response, $args) {
   global $node;
   $uuid = array_shift($args);
-  $params = $request->getQueryParams() + ['entries' => 'false'];
-  if ($params['entries'] == 'true') {
-    $transaction = $node->getTransactionEntries($uuid);
-    return json_response($response, ['data' => $transaction]);
-  }
-  else {
-    $transaction = $node->getTransaction($uuid);
-    return json_response($response, ['data' => $transaction, 'links' => $transaction->transitions()]);
-  }
+  [$transaction, $transitions] = $node->getTransaction($uuid);
+  $content = [
+    'data' => $transaction,
+    'meta' => ['transitions' => [$transaction->uuid => $transitions]]
+  ];
+  return json_response($response, $content);
+}
+)->setName('getTransaction')->add(PermissionMiddleware::class);
+
+// Retrieve one transaction as StandaloneEntries.
+$app->get('/entries/{uuid:'.$uuid_regex.'}', function (Request $request, Response $response, $args) {
+  global $node;
+  $uuid = array_shift($args);
+  $entries = $node->getTransactionEntries($uuid);
+  return json_response($response, ['data' => $entries]);
 }
 )->setName('getTransaction')->add(PermissionMiddleware::class);
 
@@ -192,7 +198,7 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
   $status_code = $transaction->version < 1 ? 200 : 201; // depends on workflow
 
-  return json_response($response, ['data' => $transaction, 'links' => $transaction->transitions()], $status_code);
+  return json_response($response, ['data' => $transaction, 'meta' => ['transitions' => $transaction->transitions()]], $status_code);
 }
 )->setName('newTransaction')->add(PermissionMiddleware::class);
 
@@ -220,25 +226,37 @@ $app->patch('/transaction/{uuid:'.$uuid_regex.'}/{dest_state}', function (Reques
 // Filter transactions
 $app->get("/transactions", function (Request $request, Response $response, $args) {
   global $node;
-  $params = $request->getQueryParams();
-  // @todo update the api so these transformations are not needed.
-  if (isset($params['sort'])) {
-    list ($params['sort'], $params['dir']) = explode(',', $params['sort']);
-  }
-  if (isset($params['pager'])) {
-    list ($params['offset'], $params['limit']) = explode(',', $params['pager']);
-    unset($params['pager']);
-  }
-  $body = $node->filterTransactions($params);
+  $params = $request->getQueryParams() + ['sort' => 'written', 'dir' => 'desc', 'limit' => 25, 'offset' => 0];
+  [$count, $transactions, $transitions] = $node->filterTransactions($params);
   $content = [
-    'data' => $body,
-    'meta' => ['number_of_results' => count($body)],
-    'links' => ['first' => 'http://blah?first', 'prev' => 'http://blah?prev', 'next' => 'http://blah?next', 'last' => 'http://blah?last']
+    'data' => $transactions,
+    'meta' => [
+      'number_of_results' => $count,
+      'current_page' => ($params['offset'] / $params['limit']) + 1,
+      'transitions' => $transitions
+    ],
+    'links' => credcom_pager('/transactions', $params, $count)
   ];
   return json_response($response, $content);
 }
 )->setName('filterTransactions')->add(PermissionMiddleware::class);
 
+// Filter transaction entries
+$app->get("/entries", function (Request $request, Response $response, $args) {
+  global $node;
+  $params = $request->getQueryParams() + ['sort' => 'written', 'dir' => 'desc', 'limit' => 25, 'offset' => 0];
+  [$count, $entries] = $node->filterTransactionEntries($params);
+  $content = [
+    'data' => $entries,
+    'meta' => [
+      'number_of_results' => $count,
+      'current_page' => ($params['offset'] / $params['limit']) + 1,
+    ],
+    'links' => credcom_pager('/entries', $params, $count)
+  ];
+  return json_response($response, $content);
+}
+)->setName('filterTransactions')->add(PermissionMiddleware::class);
 
 return $app;
 
@@ -272,4 +290,34 @@ function json_response(Response $response, $body = NULL, int $code = 200) : Resp
  */
 function exception_error_handler( $severity, $message, $file, $line ) {
   throw new CCFailure("$message in $file: $line");
+}
+
+/**
+ * Generate links first paged listings.
+ *
+ * @param string $endpoint
+ * @param array $params
+ * @param int $total_items
+ * @return array
+ */
+function credcom_pager(string $endpoint, array $params, int $total_items) : array {
+  $params = $params +=['offset' => 0, 'limit' => 25];
+  $curr_page = floor($params['offset'] / $params['limit']);
+  $pages = ceil($total_items/$params['limit']);
+  $links = [];
+  if ($pages > 1) {
+    if($curr_page > 0) {
+      $links['first'] = $endpoint .'?'.http_build_query(['offset' => 0] + $params);
+      if($curr_page > 1) {
+        $links['prev'] = $endpoint .'?'.http_build_query(['offset' => ($curr_page -1) * $params['limit']] + $params);
+      }
+    }
+    if ($curr_page < $pages) {
+      $links['next'] = $endpoint .'?'.http_build_query(['offset' => ($curr_page +1) * $params['limit']] + $params);
+      if ($curr_page < ($pages -1)) {
+        $links['last'] = $endpoint .'?'.http_build_query(['offset' => ($pages -1) * $params['limit']] + $params);
+      }
+    }
+  }
+  return $links;
 }

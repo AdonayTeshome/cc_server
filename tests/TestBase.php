@@ -40,7 +40,13 @@ class TestBase extends TestCase {
       $request = $request->withHeader('Content-Type', 'application/json');
       $request->getBody()->write($request_body);
     }
-    $response = $this->getApp()->process($request, new Response());
+    try {
+      $response = $this->getApp()->process($request, new Response());
+    }
+    catch (\Exception $e) {
+      print_r($e);
+      return NULL;
+    }
     $response->getBody()->rewind();
     $raw_contents = $response->getBody()->getContents();
     $contents = json_decode($raw_contents);
@@ -48,8 +54,16 @@ class TestBase extends TestCase {
     if (is_int($expected_response)) {
       if ($status_code <> $expected_response) {
         // Blurt out to terminal to ensure all info is captured.
-        echo "\n $acc_id got unexpected code ".$status_code." on $path:"; print_r($raw_contents);
+        echo "\n$acc_id got unexpected code ".$status_code." on $path: ".print_r($contents, 1);
+        if ($status_code == 500 and empty($contents)) {
+          $divider = strpos($raw_contents, '{"errors":');
+          $result = json_decode(substr($raw_contents, 0, $divider));
+          echo "\nGiven result:".print_r($result, 1);
+          $error = json_decode(substr($raw_contents, $divider))->errors[0];
+          echo "\n500 error appended to result".print_r($error, 1);
+        }
       }
+      // stop this test;
       $this->assertEquals($expected_response, $status_code);
       return $contents;
     }

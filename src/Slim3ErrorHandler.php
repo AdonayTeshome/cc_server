@@ -3,6 +3,7 @@ namespace CCServer;
 
 use CreditCommons\Exceptions\CCError;
 use CreditCommons\Exceptions\CCFailure;
+use League\OpenAPIValidation\PSR15\Exception\InvalidResponseMessage;
 
 /**
  * Convert all errors into an stdClass, which includes a field showing
@@ -24,7 +25,19 @@ class Slim3ErrorHandler {
     }
     $exception_class = explode('\\', get_class($exception));
     $exception_class = array_pop($exception_class);
-    if ($exception instanceOf CCError) {// New or received from downstream.
+
+    if ($exception instanceof InvalidResponseMessage) {// sent by the testing framework
+      $message = $exception->getMessage();
+      $message .= "\n".$exception->getPrevious()->getMessage();
+      $message .= "\n".$exception->getPrevious()->getPrevious()->getMessage()."\n";
+      //print_r($exception->getPrevious()->getPrevious());
+//      print_r(get_class_methods($exception->getPrevious()->getPrevious()));
+      $data = $exception->getPrevious()->getPrevious()->data();
+      //echo $message;
+      $output = new CCFailure($message);
+      $code = 500;
+    }
+    elseif ($exception instanceOf CCError) {// New or received from downstream.
       $output = $exception;
     }
     else {// An error from elsewhere, make a CCFailure.
