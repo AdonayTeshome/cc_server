@@ -25,13 +25,13 @@ class SingleNodeTest extends TestBase {
   }
 
   function testEndpoints() {
-    $result = $this->sendRequest('', 200, '', 'options');
-    $this->assertObjectHasAttribute("permittedEndpoints", $result->data);
-    $this->assertObjectNotHasAttribute("accountSummary", $result->data);
-    $this->assertObjectNotHasAttribute("filterTransactions", $result->data);
-    $result = $this->sendRequest('', 200, reset($this->normalAccIds), 'options');
-    $this->assertObjectHasAttribute("filterTransactions", $result->data);
-    $this->assertObjectHasAttribute("accountSummary", $result->data);
+    $result = (array)$this->sendRequest('', 200, '', 'options')->data;
+    $this->assertArrayHasKey("permittedEndpoints", $result);
+    $this->assertArrayNotHasKey("accountSummary", $result);
+    $this->assertArrayNotHasKey("filterTransactions", $result);
+    $result = (array)$this->sendRequest('', 200, reset($this->normalAccIds), 'options')->data;
+    $this->assertArrayHasKey("filterTransactions", $result);
+    $this->assertArrayHasKey("accountSummary", $result);
     $result = $this->sendRequest('handshake', 200, reset($this->normalAccIds));
   }
 
@@ -135,7 +135,7 @@ class SingleNodeTest extends TestBase {
     $error = $this->sendRequest('transaction/ada5b4f0-33a8-4807-90c7-3aa56ae1c741', 'DoesNotExistViolation', $admin);
     $this->assertEquals('transaction', $error->type);
     $this->assertEquals('ada5b4f0-33a8-4807-90c7-3aa56ae1c741', $error->id);
-
+    // Try to retrieve a transaction that does exist.
     $this->sendRequest('transaction/'.$transaction->uuid.'', 200, $admin);
   }
 
@@ -165,8 +165,8 @@ class SingleNodeTest extends TestBase {
     // 'bill' transactions must be approved, and enter pending state.
     $result = $this->sendRequest('transaction', 200, $payee, 'post', json_encode($obj));
     $transaction = $result->data;
-    $this->assertNotEmpty($result->links);
-    $this->assertObjectHasAttribute('pending', $result->links);
+    $this->assertNotEmpty($result->meta->transitions);
+    $this->assertNotEmpty('pending', $result->meta->transitions->pending);
     $this->assertEquals("validated", $transaction->state);
     $this->assertEquals('0', $transaction->version);
     // Check that only the creator ($payee) can see this transaction at version 0 state 'validated'
@@ -250,15 +250,17 @@ class SingleNodeTest extends TestBase {
     }
     $this->assertContainsOnly('int', $counts, TRUE, 'Transaction did not filter by description.');
     $all_entries = $this->sendRequest("entries", 200, $norm_user);
-    $this->assertEquals(count($all_entries->data), $all_entries->meta->number_of_results);
-    if (count($all_entries->data) < 3) {
-      echo 'not enough entries are written to test the filter. Only '.count($all_entries->data). ' entries saved.';
+    $entry_list = (array)$all_entries->data;
+    $this->assertEquals(count($entry_list), $all_entries->meta->number_of_results);
+    if (count($entry_list) < 3) {
+      echo 'not enough entries are written to test the filter. Only '.count($entry_list). ' entries saved.';
     }
     else {
       $limited = $this->sendRequest("entries?limit=3&offset=0", 200, $norm_user)->data;
-      $this->assertEquals(3, count($limited), "Pager failed to return 3 entries");
-      $limited = $this->sendRequest("entries?limit=1&offset=1", 200, $norm_user)->data;
-      $this->assertEquals(array_slice($all_entries->data, 1, 1), $limited, "The offset/limit queryparams don't work");
+      $this->assertEquals(3, count((array)$limited), "Pager failed to return 3 entries");
+      $limited = (array)$this->sendRequest("entries?limit=1&offset=1", 200, $norm_user)->data;
+      $selected_entry = array_slice($entry_list, 1, 1);
+      $this->assertEquals(array_pop($selected_entry), array_pop($limited), "The offset/limit queryparams didn't deliver 1,1");
     }
 
     $results = $this->sendRequest("transactions", 200, $norm_user);
@@ -276,20 +278,26 @@ class SingleNodeTest extends TestBase {
     // Test the sort
     $results = $this->sendRequest("transactions?states=erased,complete", 200, $norm_user);
     $err = FALSE;
-    foreach ($results->data as $result) {
+    $data = (array)$results->data;
+    foreach ($data as $result) {
       if (!in_array($result->state, ['erased', 'completed'])) {
         $err = TRUE;
       }
     }
     $this->assertEquals(FALSE, $err, 'Failed to filter by 2 states.');
-    $this->assertEquals(count($results->data), $results->meta->number_of_results);
-    $this->assertObjectHasAttribute('transitions', $results->meta, 'no transitions on filter result');
+    $this->assertEquals(count($data), $results->meta->number_of_results);
+    $this->assertNotNull($results->meta->transitions, 'no transitions on filter result');
+    if (!empty($data)) {
+      $uuid = $data[0]->uuid;
+      $this->assertNotEmpty($result->meta->transitions->{$uuid});
+    }
 
     $results = $this->sendRequest("transactions?involving=$payee", 200, $norm_user);
-    foreach ($results->data as $res) {
-      $main = $res->entries[0];
+    foreach ($data as $res) {
+      $entries = (array)$res->entries[0];
+      $main_entry = $entries[0];
       // Every result should have $payee as either payee or payer;
-      if (strpos($main->payee, $payee) === FALSE and strpos($main->payer, $payee) === FALSE) {
+      if (strpos($main_entry->payee, $payee) === FALSE and strpos($main_entry->payer, $payee) === FALSE) {
         $err = TRUE;
       }
     }

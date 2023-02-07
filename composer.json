@@ -25,7 +25,7 @@
   "require": {
     "credit-commons/cc-node": "@dev",
     "slim/slim": "^3@beta",
-    "php": "^8.0"
+    "php": "~8.0"
   },
   "require-dev": {
     "slim/psr7": "dev-master",

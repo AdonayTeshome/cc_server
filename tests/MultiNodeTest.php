@@ -41,6 +41,7 @@ class MultiNodeTest extends SingleNodeTest {
       }
       // Group the accounts
       foreach ($all_accounts as $path) {
+        if (substr($path, -1) == '/')continue; // don't include connector accounts.
         if ($pos = intval(strrpos($path, '/'))) {
           $node_path = substr($path, 0, $pos);
           $foreign_accounts_grouped[$node_path][] = $path;
@@ -170,6 +171,7 @@ class MultiNodeTest extends SingleNodeTest {
     global $local_accounts, $foreign_accounts_grouped, $foreign_accounts, $remote_accounts;
     $user1 = reset($this->normalAccIds);
     // get all the account details from each node.
+    // Note that these paths are both optional, and leafward nodes may also conceal them.
     foreach ($foreign_accounts_grouped as $node_path => $accounts) {
       $this->sendRequest("account/summary?acc_path=$node_path/", 200, $user1);
       $this->sendRequest("account/limits?acc_path=$node_path/", 200, $user1);
@@ -180,7 +182,6 @@ class MultiNodeTest extends SingleNodeTest {
     $i=0;
     while ($i < 3) {
       $rel_acc_path = next($foreign_accounts);
-      if (count(explode('/', $rel_acc_path)) > 2)continue;
       $this->sendRequest("account/summary?acc_path=$rel_acc_path", 200, $user1);
       $this->sendRequest("account/limits?acc_path=$rel_acc_path", 200, $user1);
       // This won't work because its not in the API.

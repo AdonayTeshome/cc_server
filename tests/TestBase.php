@@ -44,11 +44,10 @@ class TestBase extends TestCase {
       $response = $this->getApp()->process($request, new Response());
     }
     catch (\Exception $e) {
-      print_r($e);
+      #print_r($e);
       return NULL;
     }
-    $response->getBody()->rewind();
-    $raw_contents = $response->getBody()->getContents();
+    $raw_contents = strval($response->getBody());
     $contents = json_decode($raw_contents);
     $status_code = $response->getStatusCode();
     if (is_int($expected_response)) {

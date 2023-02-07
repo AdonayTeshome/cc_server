@@ -158,8 +158,7 @@ class AccountStoreTest extends TestCase {
       $request = $request->withQueryParams($params);
     }
     $response = $this->getApp()->process($request, new Response());
-    $response->getBody()->rewind();
-    $contents = json_decode($response->getBody()->getContents());
+    $contents = json_decode(strval($response->getBody()));
     $status_code = $response->getStatusCode();
     if ($status_code <> $expected_response) {
       // Blurt out to terminal to ensure all info is captured.

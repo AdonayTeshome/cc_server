@@ -14,9 +14,16 @@ use function CCnode\permitted_operations;
 class PermissionMiddleware {
 
   public function __invoke(Request $request, Response $response, callable $next) : Response {
-    global $cc_user, $cc_config, $node;
-    $cc_user = $this->authenticate($request);
+    global $cc_user, $cc_config, $node, $error_context;
+    $error_context = (object)[
+      'node' => $cc_config->nodeName,
+      'path' => $request->getUri(),
+      'method' => $request->getMethod(),
+      'user' => '- anon -'
+    ];
 
+    $cc_user = $this->authenticate($request);
+    $error_context->user = $cc_user->id;
     // The name corresponds roughly to the api route name, except where phptest doesn't support optional params
     $operationId = $request->getAttribute('route')->getName();
     if (!in_array($operationId, array_keys(permitted_operations()))) {
@@ -25,12 +32,6 @@ class PermissionMiddleware {
         $cc_user->id .= ' (trunkward)';
       }
       throw new PermissionViolation();
-    }
-
-    if ($cc_config->devMode) {
-      ini_set('display_errors', '1');
-      // this stops execution on ALL warnings and returns CCError objects
-      set_error_handler( '\exception_error_handler' );
     }
 
     return $next($request, $response);
@@ -50,7 +51,7 @@ class PermissionMiddleware {
       // Users connect with an API key which can compared directly with the database.
       if ($acc_id) {
         $auth_string = ($request->getHeaderLine('cc-auth') == 'null') ?
-          NULL : // not sure how or why null is returned as a string.
+          '' : // not sure how or why null is returned as a string.
           (string)$request->getHeaderLine('cc-auth');
         $user = load_account($acc_id);
         $user->authenticate($auth_string); // will throw if there's a problem
@@ -63,7 +64,7 @@ class PermissionMiddleware {
       // No attempt to authenticate, fallback to anon
     }
     if (!$user instanceOf Remote and $cc_config->devMode) {
-      // only display errors on the leaf node. Downstream errors are handled.
+      // only display errors on the leaf node. Downstream errors are passed up.
       ini_set('display_errors', 1);
     }
     return $user;

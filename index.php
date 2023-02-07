@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+
 /**
  * Reference implementation of a credit commons node
  */
@@ -11,10 +12,16 @@ if (\CCNode\Db::connect($temp_config['db']['name'], $temp_config['db']['user'], 
 }
 if ($temp_config['dev_mode']){
   $node_name = array_pop(explode('/', $temp_config['abs_path']));
-  //file_put_contents($node_name.'.debug', '');
   file_put_contents('last_exception.log', '');// server may not be able to recreate the file.
   file_put_contents('error.log', '');// server may not be able to recreate the file.
 }
+// Treat all warnings as errors
+error_reporting(E_ALL);
+set_error_handler(function ($severity, $message, $file, $line) {
+  if (error_reporting() & $severity) {
+    throw new \ErrorException($message, 0, $severity, $file, $line);
+  }
+});
 
 //  Simpletest needs to be able to call $app->run() itself.
 require './slimapp.php';
@@ -30,14 +37,13 @@ $app->add(function (Psr\Http\Message\ServerRequestInterface $request, Psr\Http\M
   }
   $headers = array_map(function ($val){return $val[0];}, $request->getHeaders());
   $request_headers = implode("\n", $headers);
-  $request_body = $request->getBody()->getContents();
-  $request->getBody()->rewind();
+  $request_body = strval($request->getBody());
   $response_code = $response->getStatusCode();
-  $response_body = $response->getBody()->getContents();
-  $response->getBody()->rewind();
+  $response_body = strval($response->getBody());
   $query = "INSERT INTO log (http_method, path, request_headers, request_body, response_code, response_body) "
   . "VALUES ('$method', '$path', '$request_headers', '$request_body', $response_code,'$response_body');";
   \CCNode\Db::query($query);
   return $response;
 });
 $app->run();
+
