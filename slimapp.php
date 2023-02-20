@@ -5,11 +5,12 @@
  * @note Slim works with php8.0 and breaks with 8.1.
  * @todo Slim4 which is more likely to be upgradable with php but need to
  *   fiddle PSR7 validator https://github.com/thephpleague/openapi-psr7-validator/issues/136
- *
  */
 
 use CCServer\Slim3ErrorHandler;
 use CCServer\PermissionMiddleware;
+use CCServer\SetupMiddleware;
+use CCServer\LoggingMiddleware;
 use CCServer\DecorateResponse;
 use CCNode\Transaction\TransversalTransaction;
 use CCNode\Transaction\Transaction;
@@ -18,7 +19,6 @@ use CreditCommons\Exceptions\CCViolation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use function CCNode\pager;
-
 // Slim4 (when the League\OpenAPIValidation is ready)
 //use Slim\Factory\AppFactory;
 //use Psr\Http\Message\ServerRequestInterface;
@@ -44,9 +44,10 @@ use function CCNode\pager;
 //    $response->getBody()->write(json_encode($exception, JSON_UNESCAPED_UNICODE));
 //    return $response->withStatus($exception->getCode());
 //});
-
 $app = new \Slim\App();
 $app->add(new DecorateResponse());
+$app->add(new LoggingMiddleware());
+$app->add(new SetupMiddleware());
 $c = $app->getContainer();
 $getErrorHandler = function ($c) {
   return new Slim3ErrorHandler();
@@ -65,15 +66,7 @@ $app->get('/', function (Request $request, Response $response) {
 });
 
 /**
- * Globals created in PermissionMiddleware are:
- * $node, $cc_config, $cc_workflows, $cc_user
- */
-global $node, $cc_config;
-// creates globals $cc_config, $cc_workflows, $cc_user
-$node = new \CCNode\Node(parse_ini_file('node.ini'));
-
-/**
- * Implement the Credit Commons API methods
+ * Credit Commons API methods
  */
 $app->options('/', function (Request $request, Response $response, $args) {
   global $node;
@@ -110,18 +103,18 @@ $app->get('/absolutepath', function (Request $request, Response $response) {
 }
 )->setName('absolutePath')->add(PermissionMiddleware::class);
 
-$app->get("/convert", function (Request $request, Response $response, $args) {
+$app->get("/about", function (Request $request, Response $response, $args) {
   // get the downstream rate and multiply it by the current rate
   global $node;
   $query_params = $request->getQueryParams();
   if (!isset($query_params['node_path'])) {
     throw new CCViolation('Missing query param: node_path');
   }
-  $body = ['data' => $node->convertPrice($query_params['node_path'])];
+  $body = ['data' => $node->about($query_params['node_path'])];
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
   return $response;
 }
-)->setName('convertPrice')->add(PermissionMiddleware::class);//must be logged in to know which way to convert the price.
+)->setName('about')->add(PermissionMiddleware::class);//must be logged in to know which way to convert the price.
 
 $app->get("/account/names", function (Request $request, Response $response, $args) {
   global $node;
@@ -187,7 +180,7 @@ $app->get('/transaction/{uuid:'.$uuid_regex.'}', function (Request $request, Res
   $uuid = array_shift($args);
   [$transaction, $transitions] = $node->getTransaction($uuid);
   $body = [
-    'data' => $transaction,
+    'data' => $transaction->jsonDisplayable(),
     'meta' => ['transitions' => [$transaction->uuid => $transitions]]
   ];
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
@@ -217,11 +210,11 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
   $status_code = $transaction->version < 1 ? 200 : 201; // Depends on workflow
   $body = [
-    'data' => $transaction,
+    'data' => $transaction->jsonDisplayable(),
     'meta' => ['transitions' => $transaction->transitions()]
   ];
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
-  return $response->withStatus($status_code);
+  return $response->withStatus($transaction->state == 'validated' ? 200 : 201);
 }
 )->setName('newTransaction')->add(PermissionMiddleware::class);
 
@@ -231,11 +224,11 @@ $app->post('/transaction/relay', function (Request $request, Response $response)
   $data = json_decode(strval($request->getBody()));
   // Convert the incoming amounts as soon as possible.
   $transaction = TransversalTransaction::createFromUpstream($data);
+  $confirm = $transaction->getWorkflow()->creation->confirm;
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
-  $status_code = $transaction->version < 1 ? 200 : 201; // depends on workflow
   $body = ['data' => array_values($additional_entries)];
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
-  return $response->withStatus($status_code);
+  return $response->withStatus($transaction->state == 'validated' ? 200 : 201);
 }
 )->setName('relayTransaction')->add(PermissionMiddleware::class);
 
@@ -251,8 +244,9 @@ $app->get("/transactions", function (Request $request, Response $response, $args
   global $node;
   $params = $request->getQueryParams() + ['sort' => 'written', 'dir' => 'desc', 'limit' => 25, 'offset' => 0];
   [$count, $transactions, $transitions] = $node->filterTransactions($params);
+
   $body = [
-    'data' => $transactions,
+    'data' => array_map(function ($t){return $t->jsonDisplayable();}, $transactions),
     'meta' => [
       'number_of_results' => $count,
       'current_page' => ($params['offset'] / $params['limit']) + 1,

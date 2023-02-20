@@ -16,7 +16,7 @@ class SingleNodeTest extends TestBase {
     global $cc_config;
     parent::__construct();
     $cc_config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
-    // Clear the database for single node test only.
+    // Clear the database for (single node test only).
     if ($cc_config->devMode and get_called_class() == get_class()) {
       $this->truncate();
     }
@@ -170,8 +170,8 @@ class SingleNodeTest extends TestBase {
     $this->assertEquals("validated", $transaction->state);
     $this->assertEquals('0', $transaction->version);
     // Check that only the creator ($payee) can see this transaction at version 0 state 'validated'
-    $this->sendRequest("transaction/$transaction->uuid", 'DoesNotExistViolation', $payer, 'get', 'Payer should NOT be able to see unconfirmed credit transaction');
-    $this->sendRequest("transaction/$transaction->uuid?entries=true", 'DoesNotExistViolation', $payer, 'get', 'Payer should NOT be able to see unconfirmed credit transaction entries');
+    $this->sendRequest("transaction/$transaction->uuid", 'PermissionViolation', $payer, 'get', 'Payer should NOT be able to see unconfirmed credit transaction');
+    $this->sendRequest("transaction/$transaction->uuid?entries=true", 'PermissionViolation', $payer, 'get', 'Payer should NOT be able to see unconfirmed credit transaction entries');
     $this->sendRequest("transaction/$transaction->uuid", 200, $payee, 'get', 'Payee cannot see own unvalidated transaction');
     $this->sendRequest("transaction/$transaction->uuid?entries=true", 200, $payee, 'get', 'Payee cannot see own unvalidated transaction entries');
     $this->sendRequest("transaction/$transaction->uuid", 200, $admin);
@@ -183,6 +183,7 @@ class SingleNodeTest extends TestBase {
     $pending_summary = $this->sendRequest("account/summary?acc_path=$payee", 200, $payee)->data->{$payee};
     // Get the amount of the transaction, including fees.
     list($income, $expenditure) = $this->transactionDiff($transaction, $payee);
+    // Failed asserting that 4 matches expected 0
     $this->assertEquals(
       $pending_summary->pending->balance,
       $init_summary->pending->balance + $income - $expenditure
@@ -355,6 +356,8 @@ class SingleNodeTest extends TestBase {
     }
     \CCNode\Db::query("TRUNCATE TABLE {$db}entries");
     \CCNode\Db::query("TRUNCATE TABLE {$db}transactions");
+    \CCNode\Db::query("TRUNCATE TABLE {$db}transaction_index");
+    \CCNode\Db::query("TRUNCATE TABLE {$db}hash_history");
     \CCNode\Db::query("TRUNCATE TABLE {$db}log");
   }
 }

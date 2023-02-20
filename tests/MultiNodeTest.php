@@ -83,7 +83,7 @@ class MultiNodeTest extends SingleNodeTest {
     global $foreign_accounts_grouped;
     // so just test the API
     foreach ($foreign_accounts_grouped as $node_path => $accounts) {
-      $this->sendRequest("convert?node_path=$node_path", 200);
+      $this->sendRequest("about?node_path=$node_path", 200);
       // Can't tell from here what the conversion rate should be in any given setup.
     }
   }
@@ -135,6 +135,7 @@ class MultiNodeTest extends SingleNodeTest {
     $foreign_node = end($foreign_accounts_grouped);
     $obj->payee = end($foreign_node);
     $obj->payer = end($local_accounts);
+    $obj->description = 'test 3rdparty good again';
     $this->sendRequest('transaction', 201, $admin, 'post', json_encode($obj));
   }
 

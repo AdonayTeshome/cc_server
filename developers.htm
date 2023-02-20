@@ -119,7 +119,7 @@ cc-auth: auth_key</pre>
       node with no child nodes. This means you can use the credit commons API 
       internally to read and write transactions.</p>
     <p>For example to create a (remote) transaction, first build an object 
-      inheriting from CreditCommons\BaseTransaction. Instantiate the 
+      inheriting from CreditCommons\Transaction. Instantiate the 
       CreditCommons\NodeRequester class with the name of the trunk and the last 
       hash to enable it to connect. Then pass the transaction to 
       NodeRequester::buildValidateRelayTransaction().

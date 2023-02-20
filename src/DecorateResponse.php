@@ -8,7 +8,6 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 class DecorateResponse {
 
   public function __invoke(Request $request, Response $response, callable $next) : Response {
-
     $response = $next($request, $response);
     // Do these headers just apply to the OPTIONS requests?
     return $response

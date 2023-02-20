@@ -14,13 +14,7 @@ use function CCnode\permitted_operations;
 class PermissionMiddleware {
 
   public function __invoke(Request $request, Response $response, callable $next) : Response {
-    global $cc_user, $cc_config, $node, $error_context;
-    $error_context = (object)[
-      'node' => $cc_config->nodeName,
-      'path' => $request->getUri(),
-      'method' => $request->getMethod(),
-      'user' => '- anon -'
-    ];
+    global $cc_user, $cc_config, $error_context;
 
     $cc_user = $this->authenticate($request);
     $error_context->user = $cc_user->id;

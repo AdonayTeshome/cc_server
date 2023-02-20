@@ -44,7 +44,6 @@ class TestBase extends TestCase {
       $response = $this->getApp()->process($request, new Response());
     }
     catch (\Exception $e) {
-      #print_r($e);
       return NULL;
     }
     $raw_contents = strval($response->getBody());
