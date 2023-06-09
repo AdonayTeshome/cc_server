@@ -15,7 +15,6 @@ class PermissionMiddleware {
 
   public function __invoke(Request $request, Response $response, callable $next) : Response {
     global $cc_user, $cc_config, $error_context;
-
     $cc_user = $this->authenticate($request);
     $error_context->user = $cc_user->id;
     // The name corresponds roughly to the api route name, except where phptest doesn't support optional params

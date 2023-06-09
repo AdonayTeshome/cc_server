@@ -96,7 +96,7 @@ class SingleNodeTest extends TestBase {
     $obj->type = 'zzzzzz';
     $this->sendRequest('transaction', 'DoesNotExistViolation', $admin, 'post', json_encode($obj));
     $obj->type = 'disabled';// this is the name of one of the default workflows, which exists for this test
-    $this->sendRequest('transaction', 'DoesNotExistViolation', $admin, 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'DeprecatedWorkflowViolation', $admin, 'post', json_encode($obj));
     $obj->type = '3rdparty';
     $this->sendRequest('transaction', 'PermissionViolation', '', 'post', json_encode($obj));
   }
@@ -151,16 +151,14 @@ class SingleNodeTest extends TestBase {
     $init_summary = $this->sendRequest("account/summary?acc_path=$payee", 200, $payee)->data->{$payee};
     $transaction_description = 'test bill';
     $obj = (object)[
-      'payee' => $payer,
       'payer' => $payee,
       'description' => $transaction_description,
       'quant' => 5,
       'type' => 'bill',
       'metadata' => ['foo' => 'bar']
     ];
-    // The payer and payee are the wrong way around.
-    $this->sendRequest('transaction', 'WorkflowViolation', $payee, 'post', json_encode($obj));
-    $obj->payee = $payee;
+    // The payee cannot bill themself
+    $this->sendRequest('transaction', 'SameAccountViolation', $payee, 'post', json_encode($obj));
     $obj->payer = $payer;
     // 'bill' transactions must be approved, and enter pending state.
     $result = $this->sendRequest('transaction', 200, $payee, 'post', json_encode($obj));
@@ -181,6 +179,7 @@ class SingleNodeTest extends TestBase {
     $this->sendRequest("transaction/$transaction->uuid/pending", 201, $payee, 'patch');
 
     $pending_summary = $this->sendRequest("account/summary?acc_path=$payee", 200, $payee)->data->{$payee};
+
     // Get the amount of the transaction, including fees.
     list($income, $expenditure) = $this->transactionDiff($transaction, $payee);
     // Failed asserting that 4 matches expected 0
@@ -201,8 +200,9 @@ class SingleNodeTest extends TestBase {
       $init_summary->pending->gross_out + $expenditure
     );
     $this->assertEquals(
-      $pending_summary->pending->trades,
-      $init_summary->pending->trades + 1
+      $pending_summary->pending->trades, //expected
+      $init_summary->pending->trades + 1, // actual
+      "Expected {$pending_summary->pending->trades} pending trades, found ".($init_summary->pending->trades + 1)
     );
     $this->assertEquals(
       $pending_summary->completed->balance,

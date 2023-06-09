@@ -200,11 +200,10 @@ $app->get('/entries/{uuid:'.$uuid_regex.'}', function (Request $request, Respons
 
 // The client sends a new transaction
 $app->post('/transaction', function (Request $request, Response $response) {
-  global $cc_user, $node;
-// TODO try $request->getparsedBody()
+  global $cc_user, $node, $cc_workflows;
   $data = json_decode(strval($request->getBody()));
-  // validate the input and create UUID
-  $new_transaction = NewTransaction::create($data);
+  // Validate the input and create UUID
+  $new_transaction = NewTransaction::create($data, $cc_workflows, $cc_user->id);
   $transaction = Transaction::createFromNew($new_transaction); // in state 'init'
 
   $additional_entries = $node->buildValidateRelayTransaction($transaction);

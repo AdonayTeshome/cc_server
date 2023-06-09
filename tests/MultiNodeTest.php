@@ -88,7 +88,6 @@ class MultiNodeTest extends SingleNodeTest {
     }
   }
 
-
   function testBadTransactions() {
     parent::testBadTransactions();
     global $local_accounts, $foreign_accounts_grouped, $remote_accounts;

@@ -21,6 +21,5 @@ set_error_handler(function ($severity, $message, $file, $line) {
 
 //  Simpletest needs to be able to call $app->run() itself.
 require './slimapp.php';
-die('dsfdf');
 $app->run();
 

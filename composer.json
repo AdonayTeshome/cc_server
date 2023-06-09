@@ -43,6 +43,7 @@
     "post-create-project-cmd": [
       "cp -n vendor/credit-commons/cc-node/workflows.json.example workflows.json",
       "cp -n vendor/credit-commons/cc-node/node.ini.example node.ini",
+      "ln -s vendor/credit-commons/cc-node/ui ui",
       "touch last_exception.log"
     ]
   }
