@@ -3,6 +3,7 @@ namespace CCServer;
 
 use CreditCommons\Exceptions\CCError;
 use CreditCommons\Exceptions\CCFailure;
+use CreditCommons\Exceptions\CCViolation;
 use League\OpenAPIValidation\PSR15\Exception\InvalidResponseMessage;
 use CCNode\Db;
 
@@ -29,7 +30,6 @@ class Slim3ErrorHandler {
       }
       $exception = new CCFailure($message);
     }
-
     $output = CCError::convertException($exception);
     $body = $response->getBody();
     $code = $output instanceOf CCViolation ? 400 : 500;

@@ -11,6 +11,8 @@ class SetupMiddleware {
     global $node, $error_context, $cc_config;
     // Creates globals $cc_config, $cc_workflows, $cc_user
     $node = new \CCNode\Node(parse_ini_file('node.ini'));
+    // we can't rely on $_GET, $_POST etc because phpunit bypasses them.
+    // meanwhile the error classes in cc-php-lib don't have access to globals or $request.
     $error_context = (object)[
       'node' => $cc_config->nodeName,
       'path' => $request->getUri()->getPath(),

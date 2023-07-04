@@ -55,7 +55,6 @@ $getErrorHandler = function ($c) {
 $c['errorHandler'] = $getErrorHandler;
 $c['phpErrorHandler'] = $getErrorHandler;
 
-
 /**
  * Default HTML page. (Not part of the API)
  * Since this exists as an actual file, it should be handled by .htaccess
@@ -234,6 +233,9 @@ $app->post('/transaction/relay', function (Request $request, Response $response)
 $app->patch('/transaction/{uuid:'.$uuid_regex.'}/{dest_state}', function (Request $request, Response $response, $args) {
   global $node;
   $node->transactionChangeState($args['uuid'], $args['dest_state']);
+  if ($args['dest_state'] == 'null') {
+    return $response->withStatus(200);
+  }
   return $response->withStatus(201);
 }
 )->setName('stateChange')->add(PermissionMiddleware::class);

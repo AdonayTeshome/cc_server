@@ -71,7 +71,7 @@ class TestBase extends TestCase {
         $error = $contents->errors[0];
         $err = \CreditCommons\NodeRequester::reconstructCCErr($error);
         $class = "\\CreditCommons\Exceptions\\$expected_response";
-        if (!$err instanceof $class) {
+        if (!$err instanceof $class) {// Print to terminal, hopefully
           echo "\nUnexpected error: ".print_r($err, 1);
         }
         $this->assertInstanceOf($class, $err);
@@ -79,6 +79,8 @@ class TestBase extends TestCase {
       }
       else {
         echo "\nExpected $expected_response but got: ".print_r($contents, 1);
+        echo "\nRequest body was:";
+        echo "\n".$request_body;
         $this->assertEquals(1, 0, 'Expected error but got something else.');
       }
       return NULL;
@@ -123,7 +125,6 @@ class TestBase extends TestCase {
     else {
       die('Testing requires account auth strings which can only be obtained using the example AccountStore. This node uses '.$cc_config->accountStore.'. To test the Accountstore see tests/AccountStoreTest');
     }
-
     foreach ($this->rawAccounts as $acc_id => $acc) {
       if (!empty($acc->key)) {
         $this->passwords[$acc_id] = $acc->key;
