@@ -29,7 +29,7 @@
   },
   "require-dev": {
     "slim/psr7": "dev-master",
-    "phpunit/phpunit": "^9",
+    "phpunit/phpunit": "^9.6",
     "nyholm/psr7": "^1.4",
     "league/openapi-psr7-validator": "dev-master"
   },

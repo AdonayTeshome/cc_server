@@ -197,7 +197,7 @@ class MultiNodeTest extends SingleNodeTest {
       return;
     }
     $this->sendRequest("absolutepath", 'PermissionViolation', '');
-    $nodes = $this->sendRequest("absolutepath", 200, reset($this->normalAccIds));
+    $nodes = $this->sendRequest("absolutepath", 200, reset($this->normalAccIds))->data;
     $this->assertGreaterThan(1, count($nodes), 'Absolute path did not return more than one node: '.reset($nodes));
     $this->assertEquals($cc_config->nodeName, end($nodes), 'Absolute path does not end with the current node.');
   }

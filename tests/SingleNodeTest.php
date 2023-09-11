@@ -13,7 +13,7 @@ class SingleNodeTest extends TestBase {
   const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-v0.2.openapi3.yml';
 
   function __construct() {
-    global $cc_config;
+    global $cc_config, $error_context;
     parent::__construct();
     $cc_config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
     // Clear the database for (single node test only).

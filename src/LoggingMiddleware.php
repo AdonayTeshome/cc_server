@@ -29,6 +29,7 @@ class LoggingMiddleware {
     $query = "INSERT INTO log (method, path, request_headers, request_body) "
     . "VALUES ('$method', '$path', '$request_headers', '$request_body');";
     $last_id = Db::query($query);
+
     $response = $next($request, $response);
 
     $response_code = $response->getStatusCode();
@@ -40,7 +41,6 @@ class LoggingMiddleware {
       . "SET response_code = '$response_code', response_body = \"$response_body\" "
       . "WHERE id = $last_id";
     Db::query($query);
-
     return $response;
 
 
