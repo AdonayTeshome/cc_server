@@ -23,13 +23,14 @@
     }
   ],
   "require": {
-    "credit-commons/cc-node": "@dev",
-    "slim/slim": "^3@beta",
+    "credit-commons/cc-node": "0.8.1",
+    "credit-commons/cc-php-lib": "0.8.1",
+    "slim/slim": "3.12.5",
     "php": "~8.0"
   },
   "require-dev": {
     "slim/psr7": "dev-master",
-    "phpunit/phpunit": "^9.6",
+    "phpunit/phpunit": "^9.6.11",
     "nyholm/psr7": "^1.4",
     "league/openapi-psr7-validator": "dev-master"
   },
@@ -38,6 +39,9 @@
       "CCServer\\": "src",
       "CCServer\\Tests\\": "tests"
     }
+  },
+  "config": {
+	"platform-check": false
   },
   "scripts": {
     "post-create-project-cmd": [
