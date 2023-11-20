@@ -72,12 +72,12 @@ cc-auth: auth_key</pre>
       internally to read and write transactions.</p>
     <p>Your application needs to include the cc-node (and cc-php-lib) 
       repositories. Before anything it must create a global variable $error_context
-      which looks something like <code>    $error_context = (object)[
-      'node' => MY_NODE_NAME,
-      'method' => $_SERVER['REQUEST_METHOD'],
-      'path' => $_SERVER['REQUEST_URI'],
-      'user' => MY_USER_ID
-      ];</code>
+      which looks something like <code>    \CreditCommons\ErrorContext::Create(
+          node: 'mynode', 
+          method: $_SERVER['REQUEST_METHOD']', 
+          user: 'acc_id', 
+          path: $_SERVER['REQUEST_URI']
+       );</code>
     <p>For example to create a (remote) transaction, first build an object 
       inheriting from CreditCommons\Transaction. Instantiate the 
       CreditCommons\NodeRequester class with the name of the trunk and the last 

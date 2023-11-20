@@ -23,8 +23,8 @@ class LoggingMiddleware {
       $path .= '?'.$params;
     }
     $headers = array_map(function ($val){return $val[0];}, $request->getHeaders());
-    $request_headers = http_build_query($headers, NULL, "\n");
-    $request_body = strval($request->getBody()->getContents());
+    $request_headers = http_build_query($headers, '', "\n");
+    $request_body = mysqli_real_escape_string(Db::connect(), strval($request->getBody()->getContents()));
 
     $query = "INSERT INTO log (method, path, request_headers, request_body) "
     . "VALUES ('$method', '$path', '$request_headers', '$request_body');";
@@ -35,6 +35,7 @@ class LoggingMiddleware {
     $response_code = $response->getStatusCode();
     $body = $response->getBody();
     $body->rewind();
+    // When response_code is 400 or 500, the response_body is empty.
     $response_body = mysqli_real_escape_string(Db::connect(), $body->getContents());
     $body->rewind();
     $query = "UPDATE log "

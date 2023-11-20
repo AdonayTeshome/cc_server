@@ -13,7 +13,7 @@ class SingleNodeTest extends TestBase {
   const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-v0.2.openapi3.yml';
 
   function __construct() {
-    global $cc_config, $error_context;
+    global $cc_config;
     parent::__construct();
     $cc_config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
     // Clear the database for (single node test only).
@@ -22,6 +22,8 @@ class SingleNodeTest extends TestBase {
     }
     $cc_config->devMode = 1;
     $this->loadAccounts();
+
+    require_once './vendor/autoload.php'; // needed to create the error context.
   }
 
   function testEndpoints() {
@@ -117,9 +119,6 @@ class SingleNodeTest extends TestBase {
     ];
     $obj->description = 'Two accounts the same';
     $this->sendRequest('transaction', 'SameAccountViolation', $admin, 'post', json_encode($obj));
-    $obj->description = 'Missing party';
-    unset($obj->payee);
-    $this->sendRequest('transaction', 'InvalidFieldsViolation', $admin, 'post', json_encode($obj));
     // Nonexisting account name
     $obj->payee = 'aaaaaaaaaaa';
     $obj->description = 'Invalid party';
@@ -143,9 +142,12 @@ class SingleNodeTest extends TestBase {
     $obj->type = 'disabled'; // This is the name of one of the default workflows, which exists for this test
     $this->sendRequest('transaction', 'DeprecatedWorkflowViolation', $admin, 'post', json_encode($obj));
     $obj->type = 'bill';
-    unset($obj->payer);
     $obj->description = 'A bill must be sent by the payee';
-    $this->sendRequest('transaction', 'InvalidFieldsViolation', end($this->normalAccIds), 'post', json_encode($obj));
+    $this->sendRequest('transaction', 'WorkflowViolation', end($this->normalAccIds), 'post', json_encode($obj));
+    unset($obj->payer);
+    $obj->description = 'Payer is missing';
+    $obj->type = '3rdparty';
+    $this->sendRequest('transaction', 'InvalidFieldsViolation', $admin, 'post', json_encode($obj));
   }
 
   function testTransactionLifecycle() {
@@ -189,9 +191,6 @@ class SingleNodeTest extends TestBase {
 
     // Write the transaction
     $this->sendRequest("transaction/$transaction->uuid/pending", 201, $payee, 'patch');
-
-
-
     $pending_summary = $this->sendRequest("account/summary?acc_path=$payee", 200, $payee)->data->{$payee};
 
     $this->assertEquals(
@@ -371,16 +370,16 @@ class SingleNodeTest extends TestBase {
 
   protected function makeValidTransaction() {
     $obj = (object)[
-      'payer' => reset($this->normalAccIds),
+      'payee' => reset($this->normalAccIds),
+      'payer' => next($this->normalAccIds),
       'description' => 'valid transaction',
       'quant' => 10,
       'type' => 'bill',
-      'metadata' => ['foo' => 'bar']
+      'metadata' => ['foo' => 'bar'],
     ];
-    $payee = next($this->normalAccIds);
-    $result = $this->sendRequest('transaction', 200, $payee, 'post', json_encode($obj));
+    $result = $this->sendRequest('transaction', 200, $obj->payee, 'post', json_encode($obj));
     $uuid = $result->data->uuid;
-    $this->sendRequest("transaction/$uuid/pending", 201, $payee, 'patch');
+    $this->sendRequest("transaction/$uuid/pending", 201, $obj->payee, 'patch');
     $this->sendRequest("transaction/$uuid/completed", 201, $obj->payer, 'patch');
   }
 }

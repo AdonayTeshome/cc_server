@@ -12,13 +12,14 @@ use CCServer\PermissionMiddleware;
 use CCServer\SetupMiddleware;
 use CCServer\LoggingMiddleware;
 use CCServer\DecorateResponse;
-use CCNode\Transaction\TransversalTransaction;
-use CCNode\Transaction\Transaction;
 use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCViolation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use CCNode\Transaction\TransversalTransaction;
 use function CCNode\pager;
+use function CCNode\convertNewTransaction;
+
 // Slim4 (when the League\OpenAPIValidation is ready)
 //use Slim\Factory\AppFactory;
 //use Psr\Http\Message\ServerRequestInterface;
@@ -77,10 +78,9 @@ $app->options('/', function (Request $request, Response $response, $args) {
 }
 )->setName('permittedEndpoints')->add(PermissionMiddleware::class);
 
-
 $app->get('/workflows', function (Request $request, Response $response) {
   global $cc_workflows; //is created when $node is instantiated
-  $contents = ['data' => $cc_workflows];
+  $contents = ['data' => $cc_workflows->tree];
   $response->getBody()->write(json_encode($contents, JSON_UNESCAPED_UNICODE));
   return $response;
 }
@@ -203,8 +203,7 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $data = json_decode(strval($request->getBody()));
   // Validate the input and create UUID
   $new_transaction = NewTransaction::create($data, $cc_workflows, $cc_user->id);
-  $transaction = Transaction::createFromNew($new_transaction); // in state 'init'
-
+  $transaction = convertNewTransaction($new_transaction);
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
   $status_code = $transaction->version < 1 ? 200 : 201; // Depends on workflow
   $body = [

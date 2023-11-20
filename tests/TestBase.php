@@ -2,6 +2,7 @@
 
 namespace CCServer\Tests;
 
+use CreditCommons\ErrorContext;
 use League\OpenAPIValidation\PSR15\ValidationMiddlewareBuilder;
 use League\OpenAPIValidation\PSR15\SlimAdapter;
 use Slim\Psr7\Response;
@@ -24,8 +25,7 @@ class TestBase extends TestCase {
   protected $passwords = [];//todo
 
   protected function sendRequest($path, int|string $expected_response, string $acc_id = '', string $method = 'get', string $request_body = '') : \stdClass|NULL|array {
-    global $error_context;
-    $error_context = (object)['node' => 'test', 'method' => $method, 'path' => $path, 'user' => $acc_id];
+    ErrorContext::create(node: 'test', method: $method, path: $path, user: $acc_id);
     if ($query = strstr($path, '?')) {
       $path = strstr($path, '?', TRUE);
       parse_str(substr($query, 1), $params);
