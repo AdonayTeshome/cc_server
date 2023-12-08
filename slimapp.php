@@ -7,53 +7,32 @@
  *   fiddle PSR7 validator https://github.com/thephpleague/openapi-psr7-validator/issues/136
  */
 
-use CCServer\Slim3ErrorHandler;
-use CCServer\PermissionMiddleware;
-use CCServer\SetupMiddleware;
-use CCServer\LoggingMiddleware;
 use CCServer\DecorateResponse;
+use CCServer\LoggingMiddleware;
+use CCServer\SetupMiddleware;
+use CCServer\CredComErrorHandler;
+use CCServer\PermissionMiddleware;
 use CCNode\Transaction\TransversalTransaction;
-use CCNode\Transaction\Transaction;
 use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCViolation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Factory\AppFactory;
 use function CCNode\pager;
-// Slim4 (when the League\OpenAPIValidation is ready)
-//use Slim\Factory\AppFactory;
-//use Psr\Http\Message\ServerRequestInterface;
-//$app = AppFactory::create();
-//$app->addErrorMiddleware(true, true, true);
-//$app->addRoutingMiddleware();
-//$errorMiddleware = $app->addErrorMiddleware(true, true, true);
-//// See https://www.slimframework.com/docs/v4/middleware/error-handling.html
-//// Todo this would be tidier in a class of its own extending Slim\Handlers\ErrorHandler.
-//// Note that v4 has $app->addBodyParsingMiddleware();
-////This handler converts the CCError exceptions into Json and returns them.
-//$errorMiddleware->setDefaultErrorHandler(function (
-//    ServerRequestInterface $request,
-//    \Throwable $exception,
-//    bool $displayErrorDetails,
-//    bool $logErrors,
-//    bool $logErrorDetails
-//) use ($app) {
-//    $response = $app->getResponseFactory()->createResponse();
-//    if (!$exception instanceOf CCError) {
-//      $exception = new CCFailure($exception->getMessage());
-//    }
-//    $response->getBody()->write(json_encode($exception, JSON_UNESCAPED_UNICODE));
-//    return $response->withStatus($exception->getCode());
-//});
-$app = new \Slim\App();
+use function CCNode\convertNewTransaction;
+
+$app = AppFactory::create();
+$app->addRoutingMiddleware();
+// @todo 4th argument can be an error $loggger, as in:
+//$streamHandler = new StreamHandler(__DIR__ . '/var/log', 100);
+//$logger->pushHandler($streamHandler);
+$app->addErrorMiddleware(true, true, true)
+  ->setDefaultErrorHandler(
+     new CredComErrorHandler($app->getCallableResolver(), $app->getResponseFactory())
+  );
 $app->add(new DecorateResponse());
 $app->add(new LoggingMiddleware());
 $app->add(new SetupMiddleware());
-$c = $app->getContainer();
-$getErrorHandler = function ($c) {
-  return new Slim3ErrorHandler();
-};
-$c['errorHandler'] = $getErrorHandler;
-$c['phpErrorHandler'] = $getErrorHandler;
 
 /**
  * Default HTML page. (Not part of the API)
@@ -77,10 +56,9 @@ $app->options('/', function (Request $request, Response $response, $args) {
 }
 )->setName('permittedEndpoints')->add(PermissionMiddleware::class);
 
-
 $app->get('/workflows', function (Request $request, Response $response) {
   global $cc_workflows; //is created when $node is instantiated
-  $contents = ['data' => $cc_workflows];
+  $contents = ['data' => $cc_workflows->tree];
   $response->getBody()->write(json_encode($contents, JSON_UNESCAPED_UNICODE));
   return $response;
 }
@@ -203,8 +181,7 @@ $app->post('/transaction', function (Request $request, Response $response) {
   $data = json_decode(strval($request->getBody()));
   // Validate the input and create UUID
   $new_transaction = NewTransaction::create($data, $cc_workflows, $cc_user->id);
-  $transaction = Transaction::createFromNew($new_transaction); // in state 'init'
-
+  $transaction = convertNewTransaction($new_transaction);
   $additional_entries = $node->buildValidateRelayTransaction($transaction);
   $status_code = $transaction->version < 1 ? 200 : 201; // Depends on workflow
   $body = [

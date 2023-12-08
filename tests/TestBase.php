@@ -2,9 +2,8 @@
 
 namespace CCServer\Tests;
 
-use League\OpenAPIValidation\PSR15\ValidationMiddlewareBuilder;
-use League\OpenAPIValidation\PSR15\SlimAdapter;
-use Slim\Psr7\Response;
+use CCServer\Tests\Validation\MiddlewareBuilder;
+use CreditCommons\ErrorContext;
 use PHPUnit\Framework\TestCase;
 use Nyholm\Psr7\Factory\Psr17Factory;
 
@@ -23,9 +22,35 @@ class TestBase extends TestCase {
    */
   protected $passwords = [];//todo
 
+  /**
+   * get the slim app with the validation middleware
+   * @staticvar string $app
+   *   Address of api file relative to the application root
+   * @return \Slim\App
+   */
+  protected function getApp(): \Slim\App {
+    static $app;
+    if (!$app) {
+      $psr15Middleware = (new MiddlewareBuilder)
+        ->fromYamlFile(static::API_FILE_PATH)// rel or abs? $container->get('settings')['openApi']['specificationFilePath'],
+        //->fromYaml(file_get_contents(static::API_FILE_PATH))
+        ->getValidationMiddleware();
+      $app = require_once static::SLIM_PATH;
+      $app->add($psr15Middleware);
+    }
+    return $app;
+  }
+
+  /**
+   * @param type $path
+   * @param int|string $expected_response
+   * @param string $acc_id
+   * @param string $method
+   * @param string $request_body
+   * @return \stdClass|NULL|array
+   */
   protected function sendRequest($path, int|string $expected_response, string $acc_id = '', string $method = 'get', string $request_body = '') : \stdClass|NULL|array {
-    global $error_context;
-    $error_context = (object)['node' => 'test', 'method' => $method, 'path' => $path, 'user' => $acc_id];
+    ErrorContext::create(node: 'test', method: $method, path: $path, user: $acc_id);
     if ($query = strstr($path, '?')) {
       $path = strstr($path, '?', TRUE);
       parse_str(substr($query, 1), $params);
@@ -43,9 +68,10 @@ class TestBase extends TestCase {
       $request->getBody()->write($request_body);
     }
     try {
-      $response = $this->getApp()->process($request, new Response());
+      $response = $this->getApp()->handle($request);
     }
     catch (\Exception $e) {
+      echo $e->getMessage();
       return NULL;
     }
     $raw_contents = strval($response->getBody());
@@ -89,35 +115,19 @@ class TestBase extends TestCase {
     }
   }
 
-  protected function getRequest($path, $method = 'GET') {
+  /**
+   * @param string $path
+   * @param string $method
+   * @return type
+   */
+  protected function getRequest($path, $method = 'GET') : \Psr\Http\Message\RequestInterface {
     $psr17Factory = new Psr17Factory();
     return $psr17Factory->createServerRequest(strtoupper($method), '/'.$path);
   }
 
   /**
    *
-   * @staticvar string $app
-   *   address of api file relative to the application root
-   * @param type $api_file
-   * @return \Slim\App
    */
-  protected function getApp(): \Slim\App {
-    static $app;
-    if (!$app) {
-      $app = require_once static::SLIM_PATH;
-      if (static::API_FILE_PATH) {
-        $spec = file_get_contents(static::API_FILE_PATH);
-        $psr15Middleware = (new ValidationMiddlewareBuilder)
-          ->fromYaml($spec)
-          ->getValidationMiddleware();
-        $middleware = new SlimAdapter($psr15Middleware);
-        $app->add($middleware);
-      }
-    }
-    return $app;
-  }
-
-
   function loadAccounts() {
     global $cc_config;
     $this->nodePath = explode('/', $cc_config->absPath);

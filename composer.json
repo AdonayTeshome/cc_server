@@ -19,9 +19,9 @@
     }
   ],
   "require": {
-    "credit-commons/cc-node": "^0.8",
+    "credit-commons/cc-node": "0.8.3",
     "slim/slim": "^3@beta",
-    "php": "~8.0"
+    "php": "^8"
   },
   "require-dev": {
     "slim/psr7": "dev-master",
