@@ -14,7 +14,7 @@ if (!is_file(NODE_INI_FILE)) {
   copy('../vendor/credit-commons/cc-node/workflows.json.example', 'workflows.json');
   echo "node.ini and workflows.json files created.";
 }
-$config = new \CCNode\ConfigFromIni(parse_ini_file(NODE_INI_FILE));
+$config = \CCNode\CCNodeConfig::createFromIniArray(\parse_ini_file(\realpath(NODE_INI_FILE)));
 
 $abs_path = explode('/', $config->absPath);
 end($abs_path);
