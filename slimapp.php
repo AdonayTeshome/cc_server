@@ -1,10 +1,6 @@
 <?php
 /**
- * Reference implementation of a credit commons node
- *
- * @note Slim works with php8.0 and breaks with 8.1.
- * @todo Slim4 which is more likely to be upgradable with php but need to
- *   fiddle PSR7 validator https://github.com/thephpleague/openapi-psr7-validator/issues/136
+ * Reference implementation of a credit commons node.
  */
 
 use CCServer\DecorateResponse;
@@ -23,7 +19,7 @@ use function CCNode\convertNewTransaction;
 
 $app = AppFactory::create();
 $app->addRoutingMiddleware();
-// @todo 4th argument can be an error $loggger, as in:
+// @todo 4th argument can be an error $logger, as in:
 //$streamHandler = new StreamHandler(__DIR__ . '/var/log', 100);
 //$logger->pushHandler($streamHandler);
 $app->addErrorMiddleware(true, true, true)
@@ -58,7 +54,7 @@ $app->options('/', function (Request $request, Response $response, $args) {
 
 $app->get('/workflows', function (Request $request, Response $response) {
   global $cc_workflows; //is created when $node is instantiated
-  $contents = ['data' => $cc_workflows->tree];
+  $contents = ['data' => $cc_workflows];
   $response->getBody()->write(json_encode($contents, JSON_UNESCAPED_UNICODE));
   return $response;
 }
@@ -222,7 +218,6 @@ $app->get("/transactions", function (Request $request, Response $response, $args
   global $node;
   $params = $request->getQueryParams() + ['sort' => 'written', 'dir' => 'desc', 'limit' => 25, 'offset' => 0];
   [$count, $transactions, $transitions] = $node->filterTransactions($params);
-
   $body = [
     'data' => array_map(function ($t){return $t->jsonDisplayable();}, $transactions),
     'meta' => [
@@ -248,9 +243,11 @@ $app->get("/entries", function (Request $request, Response $response, $args) {
     'meta' => [
       'number_of_results' => $count,
       'current_page' => ($params['offset'] / $params['limit']) + 1,
-    ],
-    'links' => pager('/entries', $params, $count)
+    ]
   ];
+  if ($count > 1) {
+    $body['links'] = pager('/entries', $params, $count);
+  }
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
   return $response;
 }

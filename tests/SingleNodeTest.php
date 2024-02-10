@@ -273,7 +273,7 @@ class SingleNodeTest extends TestBase {
     $this->assertEquals(array_slice($first_three, 1, 1), $second, "The offset/limit queryparams don't work");
 
     $all_entries = $this->sendRequest("entries", 200, $norm_user);
-    $entry_list = (array)$all_entries->data;
+    $entry_list = $all_entries->data;
     $this->assertEquals(count($entry_list), $all_entries->meta->number_of_results);
     if (count($entry_list) < 3) {
       $this->makeValidTransaction();

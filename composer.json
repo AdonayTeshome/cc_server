@@ -16,10 +16,15 @@
     {
       "type": "gitlab",
       "url": "git@gitlab.com:credit-commons/cc-node"
+    },
+    {
+      "type": "path",
+      "url": "/home/matslats/Software/credit-commons/*",
+      "options": { "symlink": true }
     }
   ],
   "require": {
-    "credit-commons/cc-node": "0.8.3",
+    "credit-commons/cc-node": "^0.8",
     "slim/slim": "^4@beta",
     "php": "^8"
   },

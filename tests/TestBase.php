@@ -128,7 +128,7 @@ class TestBase extends TestCase {
   /**
    *
    */
-  function loadAccounts() {
+  function loadAccounts($include_remote = FALSE) {
     global $cc_config;
     $this->nodePath = explode('/', $cc_config->absPath);
     if ($cc_config->accountStore == '\Examples\AccountStore') {
