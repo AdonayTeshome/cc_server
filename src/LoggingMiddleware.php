@@ -34,14 +34,20 @@ class LoggingMiddleware {
     $response = $handler->handle($request);
 
     $response_code = $response->getStatusCode();
-    $body = $response->getBody();
-    $body->rewind();
-    // When response_code is 400 or 500, the response_body is empty.
-    $response_body = mysqli_real_escape_string(Db::connect(), $body->getContents());
-    $body->rewind();
-    $query = "UPDATE log "
-      . "SET response_code = '$response_code', response_body = \"$response_body\" "
-      . "WHERE id = $last_id";
+    if ($response_code == 404) {
+      // Don't 'log 404s
+      $query = "DELETE FROM log WHERE id = $last_id";
+    }
+    else {
+      $body = $response->getBody();
+      $body->rewind();
+      // When response_code is 400 or 500, the response_body is empty.
+      $response_body = mysqli_real_escape_string(Db::connect(), $body->getContents());
+      $body->rewind();
+      $query = "UPDATE log "
+        . "SET response_code = '$response_code', response_body = \"$response_body\" "
+        . "WHERE id = $last_id";
+    }
     Db::query($query);
     return $response;
 
