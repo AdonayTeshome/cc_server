@@ -3,22 +3,24 @@ namespace CCServer;
 
 use CCNode\Accounts\User;
 use CCNode\Accounts\Remote;
-use CreditCommons\Exceptions\PermissionViolation;
-use Psr\Http\Message\ResponseInterface as Response;
-use Psr\Http\Message\ServerRequestInterface as Request;
 use function CCNode\accountStore;
 use function CCNode\load_account;
 use function CCnode\permitted_operations;
+use CreditCommons\Exceptions\PermissionViolation;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 
 class PermissionMiddleware {
 
-  public function __invoke(Request $request, Response $response, callable $next) : Response {
+  public function __invoke(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
     global $cc_user, $cc_config;
 
     $cc_user = $this->authenticate($request);
-    // The name corresponds roughly to the api route name, except where phptest doesn't support optional params
-    $operationId = $request->getAttribute('route')->getName();
+    // The route name/operation ID corresponds to the API method ID,
+    // (Except where phptest doesn't support optional params)
+    $operationId = $request->getAttribute('__route__')->getName();
     if (!in_array($operationId, array_keys(permitted_operations()))) {
       if ($cc_user->id == $cc_config->trunkwardAcc) {
         // Change the username for a more helpful error message.
@@ -26,8 +28,7 @@ class PermissionMiddleware {
       }
       throw new PermissionViolation();
     }
-
-    return $next($request, $response);
+    return $handler->handle($request);
   }
 
   /**
@@ -36,7 +37,7 @@ class PermissionMiddleware {
    * @return void
    * @throws DoesNotExistViolation|HashMismatchFailure|AuthViolation
    */
-  function authenticate(Request $request) : User {
+  function authenticate(ServerRequestInterface $request) : User {
     global $cc_config;
     $accountStore = accountStore();
     $user = $accountStore->anonAccount();

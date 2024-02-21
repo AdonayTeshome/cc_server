@@ -1,6 +1,7 @@
 <?php
 
 namespace CCServer\Tests;
+use \CCNode\CCNodeConfig;
 
 /**
  * Tests the API functions of a node without touching remote nodes.
@@ -10,12 +11,12 @@ class SingleNodeTest extends TestBase {
 
   const SLIM_PATH = 'slimapp.php';
   //const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-openapi-3.0.yml';
-  const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-v0.2.openapi3.yml';
+  const API_FILE_PATH = 'vendor/credit-commons/cc-php-lib/docs/credit-commons-openapi3.yml';
 
   function __construct() {
     global $cc_config;
     parent::__construct();
-    $cc_config = new \CCNode\ConfigFromIni(parse_ini_file('node.ini'));
+    $cc_config = CCNodeConfig::createFromIniArray(parse_ini_file('node.ini'));
     // Clear the database for (single node test only).
     if ($cc_config->devMode and get_called_class() == get_class()) {
       $this->truncate();
@@ -272,7 +273,7 @@ class SingleNodeTest extends TestBase {
     $this->assertEquals(array_slice($first_three, 1, 1), $second, "The offset/limit queryparams don't work");
 
     $all_entries = $this->sendRequest("entries", 200, $norm_user);
-    $entry_list = (array)$all_entries->data;
+    $entry_list = $all_entries->data;
     $this->assertEquals(count($entry_list), $all_entries->meta->number_of_results);
     if (count($entry_list) < 3) {
       $this->makeValidTransaction();

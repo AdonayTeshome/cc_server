@@ -1,14 +1,15 @@
 <?php
 namespace CCServer;
 
-use Psr\Http\Message\ResponseInterface as Response;
-use Psr\Http\Message\ServerRequestInterface as Request;
 use CCNode\Db;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 
 class LoggingMiddleware {
 
-  public function __invoke(Request $request, Response $response, callable $next) : Response {
+  public function __invoke(ServerRequestInterface $request, RequestHandlerInterface $handler) : ResponseInterface {
     global $cc_config;
     if ($cc_config->devMode){
       // server may not be able to recreate the file.
@@ -30,17 +31,23 @@ class LoggingMiddleware {
     . "VALUES ('$method', '$path', '$request_headers', '$request_body');";
     $last_id = Db::query($query);
 
-    $response = $next($request, $response);
+    $response = $handler->handle($request);
 
     $response_code = $response->getStatusCode();
-    $body = $response->getBody();
-    $body->rewind();
-    // When response_code is 400 or 500, the response_body is empty.
-    $response_body = mysqli_real_escape_string(Db::connect(), $body->getContents());
-    $body->rewind();
-    $query = "UPDATE log "
-      . "SET response_code = '$response_code', response_body = \"$response_body\" "
-      . "WHERE id = $last_id";
+    if ($response_code == 404) {
+      // Don't 'log 404s
+      $query = "DELETE FROM log WHERE id = $last_id";
+    }
+    else {
+      $body = $response->getBody();
+      $body->rewind();
+      // When response_code is 400 or 500, the response_body is empty.
+      $response_body = mysqli_real_escape_string(Db::connect(), $body->getContents());
+      $body->rewind();
+      $query = "UPDATE log "
+        . "SET response_code = '$response_code', response_body = \"$response_body\" "
+        . "WHERE id = $last_id";
+    }
     Db::query($query);
     return $response;
 

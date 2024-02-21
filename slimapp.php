@@ -1,21 +1,22 @@
 <?php
 /**
- * Reference implementation of a credit commons node
- *
- * @note Slim works with php8.0 and breaks with 8.1.
- * @todo Slim4 which is more likely to be upgradable with php but need to
- *   fiddle PSR7 validator https://github.com/thephpleague/openapi-psr7-validator/issues/136
+ * Reference implementation of a credit commons node.
  */
 
-use CCServer\Slim3ErrorHandler;
-use CCServer\PermissionMiddleware;
-use CCServer\SetupMiddleware;
-use CCServer\LoggingMiddleware;
 use CCServer\DecorateResponse;
+<<<<<<< HEAD
+=======
+use CCServer\LoggingMiddleware;
+use CCServer\SetupMiddleware;
+use CCServer\CredComErrorHandler;
+use CCServer\PermissionMiddleware;
+use CCNode\Transaction\TransversalTransaction;
+>>>>>>> 0.8.x
 use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCViolation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+<<<<<<< HEAD
 use CCNode\Transaction\TransversalTransaction;
 use function CCNode\pager;
 use function CCNode\convertNewTransaction;
@@ -46,15 +47,24 @@ use function CCNode\convertNewTransaction;
 //    return $response->withStatus($exception->getCode());
 //});
 $app = new \Slim\App();
+=======
+use Slim\Factory\AppFactory;
+use function CCNode\pager;
+use function CCNode\convertNewTransaction;
+
+$app = AppFactory::create();
+$app->addRoutingMiddleware();
+// @todo 4th argument can be an error $logger, as in:
+//$streamHandler = new StreamHandler(__DIR__ . '/var/log', 100);
+//$logger->pushHandler($streamHandler);
+$app->addErrorMiddleware(true, true, true)
+  ->setDefaultErrorHandler(
+     new CredComErrorHandler($app->getCallableResolver(), $app->getResponseFactory())
+  );
+>>>>>>> 0.8.x
 $app->add(new DecorateResponse());
 $app->add(new LoggingMiddleware());
 $app->add(new SetupMiddleware());
-$c = $app->getContainer();
-$getErrorHandler = function ($c) {
-  return new Slim3ErrorHandler();
-};
-$c['errorHandler'] = $getErrorHandler;
-$c['phpErrorHandler'] = $getErrorHandler;
 
 /**
  * Default HTML page. (Not part of the API)
@@ -244,7 +254,6 @@ $app->get("/transactions", function (Request $request, Response $response, $args
   global $node;
   $params = $request->getQueryParams() + ['sort' => 'written', 'dir' => 'desc', 'limit' => 25, 'offset' => 0];
   [$count, $transactions, $transitions] = $node->filterTransactions($params);
-
   $body = [
     'data' => array_map(function ($t){return $t->jsonDisplayable();}, $transactions),
     'meta' => [
@@ -270,9 +279,11 @@ $app->get("/entries", function (Request $request, Response $response, $args) {
     'meta' => [
       'number_of_results' => $count,
       'current_page' => ($params['offset'] / $params['limit']) + 1,
-    ],
-    'links' => pager('/entries', $params, $count)
+    ]
   ];
+  if ($count > 1) {
+    $body['links'] = pager('/entries', $params, $count);
+  }
   $response->getBody()->write(json_encode($body, JSON_UNESCAPED_UNICODE));
   return $response;
 }
