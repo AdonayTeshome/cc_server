@@ -1,10 +1,24 @@
 Options +FollowSymLinks
-RewriteEngine on
-# Allow navigation to the following
-RewriteRule ^config - [L,NC]
-RewriteRule ^index.html - [L,NC]
-RewriteRule ^ui - [L,NC]
+RewriteEngine On
 
-#Everything else goes to index.php
-RewriteRule ^ index.php [L]
-RewriteRule ^/$ index.php [R,L]
+#optionally allow only https requests
+RewriteCond %{HTTPS} off
+RewriteRule ^ - [R=403,L]
+
+# Allow normal access to certain files and dirs
+RewriteRule ^index.php - [L,NC]
+RewriteRule ^index.html$ - [L]
+RewriteRule ^(config)/ - [L]
+RewriteRule ^(ui)/ - [L]
+
+# Rewrite Credit Commons paths to index.php.
+RewriteRule ^about$ index.php [L]
+RewriteRule ^absolutepath index.php [L]
+RewriteRule ^entries index.php [L]
+RewriteRule ^transaction index.php [L]
+RewriteRule ^workflows index.php [L]
+RewriteRule ^account index.php [L]
+RewriteRule ^handshake$ index.php [L]
+
+# Return a 404 for any other requests
+RewriteRule ^.*$ - [R=404,L]

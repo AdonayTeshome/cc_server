@@ -4,65 +4,27 @@
  */
 
 use CCServer\DecorateResponse;
-<<<<<<< HEAD
-=======
 use CCServer\LoggingMiddleware;
 use CCServer\SetupMiddleware;
 use CCServer\CredComErrorHandler;
 use CCServer\PermissionMiddleware;
 use CCNode\Transaction\TransversalTransaction;
->>>>>>> 0.8.x
 use CreditCommons\NewTransaction;
 use CreditCommons\Exceptions\CCViolation;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
-<<<<<<< HEAD
-use CCNode\Transaction\TransversalTransaction;
 use function CCNode\pager;
 use function CCNode\convertNewTransaction;
 
-// Slim4 (when the League\OpenAPIValidation is ready)
-//use Slim\Factory\AppFactory;
-//use Psr\Http\Message\ServerRequestInterface;
-//$app = AppFactory::create();
-//$app->addErrorMiddleware(true, true, true);
-//$app->addRoutingMiddleware();
-//$errorMiddleware = $app->addErrorMiddleware(true, true, true);
-//// See https://www.slimframework.com/docs/v4/middleware/error-handling.html
-//// Todo this would be tidier in a class of its own extending Slim\Handlers\ErrorHandler.
-//// Note that v4 has $app->addBodyParsingMiddleware();
-////This handler converts the CCError exceptions into Json and returns them.
-//$errorMiddleware->setDefaultErrorHandler(function (
-//    ServerRequestInterface $request,
-//    \Throwable $exception,
-//    bool $displayErrorDetails,
-//    bool $logErrors,
-//    bool $logErrorDetails
-//) use ($app) {
-//    $response = $app->getResponseFactory()->createResponse();
-//    if (!$exception instanceOf CCError) {
-//      $exception = new CCFailure($exception->getMessage());
-//    }
-//    $response->getBody()->write(json_encode($exception, JSON_UNESCAPED_UNICODE));
-//    return $response->withStatus($exception->getCode());
-//});
-$app = new \Slim\App();
-=======
-use Slim\Factory\AppFactory;
-use function CCNode\pager;
-use function CCNode\convertNewTransaction;
-
-$app = AppFactory::create();
+$app = Slim\Factory\AppFactory::create();
 $app->addRoutingMiddleware();
 // @todo 4th argument can be an error $logger, as in:
 //$streamHandler = new StreamHandler(__DIR__ . '/var/log', 100);
 //$logger->pushHandler($streamHandler);
-$app->addErrorMiddleware(true, true, true)
-  ->setDefaultErrorHandler(
-     new CredComErrorHandler($app->getCallableResolver(), $app->getResponseFactory())
-  );
->>>>>>> 0.8.x
 $app->add(new DecorateResponse());
+$app->addErrorMiddleware(true, true, true)->setDefaultErrorHandler(
+  new CredComErrorHandler($app->getCallableResolver(), $app->getResponseFactory())
+);
 $app->add(new LoggingMiddleware());
 $app->add(new SetupMiddleware());
 
@@ -90,7 +52,7 @@ $app->options('/', function (Request $request, Response $response, $args) {
 
 $app->get('/workflows', function (Request $request, Response $response) {
   global $cc_workflows; //is created when $node is instantiated
-  $contents = ['data' => $cc_workflows->tree];
+  $contents = ['data' => $cc_workflows];
   $response->getBody()->write(json_encode($contents, JSON_UNESCAPED_UNICODE));
   return $response;
 }

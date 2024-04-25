@@ -16,11 +16,6 @@
     {
       "type": "gitlab",
       "url": "git@gitlab.com:credit-commons/cc-node"
-    },
-    {
-      "type": "path",
-      "url": "/home/matslats/Software/credit-commons/*",
-      "options": { "symlink": true }
     }
   ],
   "require": {

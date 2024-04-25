@@ -40,7 +40,6 @@ class PermissionMiddleware {
   function authenticate(ServerRequestInterface $request) : User {
     global $cc_config;
     $accountStore = accountStore();
-    $user = $accountStore->anonAccount();
     if ($request->hasHeader('cc-user') and $request->hasHeader('cc-auth')) {
       $acc_id = $request->getHeaderLine('cc-user');
       // Users connect with an API key which can compared directly with the database.
@@ -53,10 +52,12 @@ class PermissionMiddleware {
       }
       else {
         // Blank username supplied, fallback to anon
+        $user = $accountStore->anonAccount();// anon
       }
     }
     else {
       // No attempt to authenticate, fallback to anon
+      $user = $accountStore->anonAccount();// anon
     }
     if (!$user instanceOf Remote and $cc_config->devMode) {
       // only display errors on the leaf node. Downstream errors are passed up.

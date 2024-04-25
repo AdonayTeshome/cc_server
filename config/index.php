@@ -72,7 +72,7 @@ if ($_POST) {
     require './writeini.php';
     $config = replaceIni($_POST, NODE_INI_FILE);
     $connection = new mysqli('localhost', $config->dbCreds['user'], $config->dbCreds['pass']);
-    $connection->query("DROP DATABASE IF EXISTS".$config->dbCreds['name']);
+    $connection->query("DROP DATABASE IF EXISTS ".$config->dbCreds['name']);
     $connection->query("CREATE DATABASE ".$config->dbCreds['name']);
     config_connect($config);
     foreach (explode(';', file_get_contents('../vendor/credit-commons/cc-node/install.sql')) as $q) {
