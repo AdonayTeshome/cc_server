@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Reference implementation of a credit commons node
  */
-require_once './vendor/autoload.php';
+require_once __DIR__ . '/vendor/autoload.php';
 ini_set('html_errors', '0');
 $temp_config = parse_ini_file('./node.ini');
 if (\CCNode\Db::connect($temp_config['db']['name'], $temp_config['db']['user'], $temp_config['db']['pass'], $temp_config['db']['server'])->connect_error) {
