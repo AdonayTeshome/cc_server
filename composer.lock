@@ -8,20 +8,20 @@
     "packages": [
         {
             "name": "credit-commons/cc-node",
-            "version": "0.8.4",
+            "version": "0.8.5",
             "source": {
                 "type": "git",
                 "url": "https://gitlab.com/credit-commons/cc-node.git",
-                "reference": "795b740ace308796f02c88143b85a12e15ce8664"
+                "reference": "07149f772070815333644f5309c8d2cfa6bce1e1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://gitlab.com/api/v4/projects/credit-commons%2Fcc-node/repository/archive.zip?sha=795b740ace308796f02c88143b85a12e15ce8664",
-                "reference": "795b740ace308796f02c88143b85a12e15ce8664",
+                "url": "https://gitlab.com/api/v4/projects/credit-commons%2Fcc-node/repository/archive.zip?sha=07149f772070815333644f5309c8d2cfa6bce1e1",
+                "reference": "07149f772070815333644f5309c8d2cfa6bce1e1",
                 "shasum": ""
             },
             "require": {
-                "credit-commons/cc-php-lib": "~0.8.4",
+                "credit-commons/cc-php-lib": "^0.8",
                 "ext-mysqli": "*",
                 "php": "^8"
             },
@@ -54,10 +54,10 @@
             "homepage": "https://creditcommons.net",
             "support": {
                 "email": "matslats@fastmail.com",
-                "source": "https://gitlab.com/credit-commons/cc-node/-/tree/0.8.4",
+                "source": "https://gitlab.com/credit-commons/cc-node/-/tree/0.8.5",
                 "issues": "https://gitlab.com/credit-commons/cc-node/-/issues"
             },
-            "time": "2024-01-30T15:23:33+01:00"
+            "time": "2024-04-05T19:13:02+02:00"
         },
         {
             "name": "credit-commons/cc-php-lib",
