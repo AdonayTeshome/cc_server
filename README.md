@@ -33,36 +33,21 @@ Combinations of seven packages support several scenarios:
 ### Procedure to set up a standalone node.
 To run a credit commons node as a web service:
 
-- Create a VirtualHost and download this package to the web root.
-- Go to that directory and run "composer update"
-- navigate in the browser to the project root and you will land on the config page.
-- create a database and enter the credentials on the config page.
-- The node should now work with the default users.
-- A standalone node like this will probably need to access the [accountStore] (and optionally, [the business logic]) as other REST services with custom code.
+  * Navigate to the directory you want to serve from e.g. /var/www/my_credcom_node and rund the following command:
+  * $ composer create-project --stability dev credit-commons/cc-server --repository '{"type": "gitlab","url": "git@gitlab.com:credit-commons/cc-server"}' MY_CC_SERVER_DIR
+  * Download this package to the directory you want to serve from 
+  * Go to that directory and run "composer update"
+  * Determine what AccountStore you will use and whether it will included as a class or as its own REST service. An example accountStore class is provided, with about 3 accounts defined in a json file.
+  * Similarly for business logic sub service which is optional.
+  * Set up a VirtualHost for the credit commons ledger service pointing to the current directory and other virtualhosts if needed for the accountStore and business logic sub services. restart the web server!
+  * Don't forget to enter the site in your /etc/hosts file something like ``127.0.0.1 myccnode accounts.myccnode blogic.myccnode`` replacing myccnode for your virtualhost name.
+  * create and setup a database using the queries in vendor/credit-commons/cc-node/install.sql
+  * Navigate in the browser to the project root and you will land on the config page.
+  * Enter the db credentials, accountstore and business logic class names or urls, the node name and privacy settings etc.
+  * On submission you will be directed to the AccountStore config where you can add to the default three accounts.
+  * (optional) If you want business logic, then configure by editing BlogicService/blogic.ini by hand.
 
-### Procedure to incorporate a Credit Commons node in your PHP application.
-
-- In your main project's composer file "require credit-commons/cc-node"
-- In your code, call the documented [API functions](https://gitlab.com/credit-commons/cc-php-lib/-/blob/master/docs/credit-commons-openapi-3.0.yml)
-- Write a class which extends CCNode\AccountStoreDefault to convert your member account details into the objects that extend CCNode\User and declare it in node.ini.
-- If you need business logic, write a class which extends [CCNode\CCBlogicInterface]() and declare it in node.ini.
-
-### Procedure to install separate web services.
-
-Your app needs to provide the Credit Commons node with basic info about your user accounts (wallet name, balance limits and admin status). The credit commons node can make requests to a microservice which implements the accountstore API. A (PHP) example of such a service is [cc-accountstore-server](blah) which comes bundled with [cc-demo-accountstore](blah)
-
-The business logic, is optional but works in a similar way. You can set up a microservice which implements the one method API, example is [cc-blogic-server](blah)
-
-## Installation
-To install a credit commons server,
-
-    $ composer create-project --stability dev credit-commons/cc-server --repository '{"type": "gitlab","url": "git@gitlab.com:credit-commons/cc-server"}' MY_CC_SERVER
-
-Create the VirtualHost on your webserver with the web root pointing to MY_CC_SERVER and restart the server.
-Navigate in your browser to the web root, and you will be redirected to the setup page.
-Create a database and enter your credentials. Note that here you can also set the classes or urls for the accountstore and the business logic module.
-Navigate again to the web root and if you see a holding page the server is ready to receive requests.
-To authorise requests against users in the demo account store use headers cc-user: alice and cc-auth: 123
+## Tests
 Run tests with:
 
     $ vendor/bin/phpunit tests/SingleNodeTest.php
